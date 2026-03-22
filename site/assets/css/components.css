@@ -70,8 +70,9 @@
 .landing-title {
   max-width: 14ch;
   font-size: clamp(2.2rem, 1.1rem + 4.8vw, 5.2rem);
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
+  letter-spacing: normal;
+  text-transform: none;
+  font-family: "Noto Sans JP", "Noto Sans", "Manrope", "Segoe UI", sans-serif;
 }
 
 .landing-subtitle {
@@ -131,6 +132,12 @@
   border-bottom: 1px solid var(--accent-soft);
   padding-bottom: 0.2rem;
   color: var(--accent);
+}
+
+.milestone-links {
+  display: inline-flex;
+  flex-wrap: wrap;
+  gap: 0.8rem;
 }
 
 .quote {
