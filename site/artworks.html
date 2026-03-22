@@ -1,0 +1,76 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="description" content="Creative and visual works." />
+    <title>Portfolio | Artworks</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;700&family=Noto+Sans+JP:wght@400;500&family=Noto+Serif+JP:wght@500;700&display=swap"
+      rel="stylesheet"
+    />
+    <link rel="stylesheet" href="assets/css/variables.css" />
+    <link rel="stylesheet" href="assets/css/base.css" />
+    <link rel="stylesheet" href="assets/css/layout.css" />
+    <link rel="stylesheet" href="assets/css/components.css" />
+  </head>
+  <body data-page="artworks">
+    <header class="site-header">
+      <div class="site-shell header-row">
+        <a class="brand" href="index.html">
+          <strong>Your Name</strong>
+          <span>Cloud Engineer / Writer / Creator</span>
+        </a>
+        <nav class="site-nav" aria-label="Main navigation">
+          <ul>
+            <li><a class="nav-link" data-nav="home" href="index.html">Home</a></li>
+            <li><a class="nav-link" data-nav="projects" href="projects.html">Projects</a></li>
+            <li><a class="nav-link" data-nav="articles" href="articles.html">Articles</a></li>
+            <li><a class="nav-link" data-nav="about" href="about.html">About</a></li>
+          </ul>
+        </nav>
+      </div>
+    </header>
+
+    <main class="site-shell">
+      <section class="section">
+        <div class="hero-copy" data-reveal>
+          <p class="kicker">Artworks</p>
+          <h1>Visual experiments and personal creations.</h1>
+          <p class="lead">
+            This gallery will grow with selected illustrations, visual studies, and other creative work.
+          </p>
+        </div>
+      </section>
+
+      <section class="section">
+        <div class="grid-3">
+          <article class="card" data-reveal data-delay="60">
+            <p class="meta">Series 01</p>
+            <h3>Quiet Geometry</h3>
+            <p>Monochrome forms exploring negative space and rhythm.</p>
+          </article>
+          <article class="card" data-reveal data-delay="120">
+            <p class="meta">Series 02</p>
+            <h3>Cloud Fragments</h3>
+            <p>Sketches inspired by distributed systems and weather maps.</p>
+          </article>
+          <article class="card" data-reveal data-delay="180">
+            <p class="meta">Series 03</p>
+            <h3>Line and Memory</h3>
+            <p>Minimal linework studies combining architecture and emotion.</p>
+          </article>
+        </div>
+      </section>
+    </main>
+
+    <footer class="site-shell footer">
+      <p>Copyright <span data-year></span> Your Name</p>
+      <p>Creative archive in progress.</p>
+    </footer>
+
+    <script src="assets/js/main.js"></script>
+  </body>
+</html>

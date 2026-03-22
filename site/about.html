@@ -1,0 +1,92 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="description" content="About the person behind the portfolio." />
+    <title>Portfolio | About</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;700&family=Noto+Sans+JP:wght@400;500&family=Noto+Serif+JP:wght@500;700&display=swap"
+      rel="stylesheet"
+    />
+    <link rel="stylesheet" href="assets/css/variables.css" />
+    <link rel="stylesheet" href="assets/css/base.css" />
+    <link rel="stylesheet" href="assets/css/layout.css" />
+    <link rel="stylesheet" href="assets/css/components.css" />
+  </head>
+  <body data-page="about">
+    <header class="site-header">
+      <div class="site-shell header-row">
+        <a class="brand" href="index.html">
+          <strong>Your Name</strong>
+          <span>Cloud Engineer / Writer / Creator</span>
+        </a>
+        <nav class="site-nav" aria-label="Main navigation">
+          <ul>
+            <li><a class="nav-link" data-nav="home" href="index.html">Home</a></li>
+            <li><a class="nav-link" data-nav="projects" href="projects.html">Projects</a></li>
+            <li><a class="nav-link" data-nav="articles" href="articles.html">Articles</a></li>
+            <li><a class="nav-link" data-nav="about" href="about.html">About</a></li>
+          </ul>
+        </nav>
+      </div>
+    </header>
+
+    <main class="site-shell">
+      <section class="section hero">
+        <div class="hero-copy" data-reveal>
+          <p class="kicker">About</p>
+          <h1>I build with systems thinking and write with human intent.</h1>
+          <p class="lead">
+            I work at the intersection of cloud infrastructure, product clarity, and creative expression. This portfolio is where those threads meet.
+          </p>
+          <p>
+            My process is grounded in practical architecture, careful naming, and a calm sense of design. I value small decisions that scale over time.
+          </p>
+        </div>
+
+        <aside class="card" data-reveal data-delay="120">
+          <p class="kicker">Snapshot</p>
+          <h3>Based in</h3>
+          <p>Jakarta / Remote</p>
+          <h3>Primary stack</h3>
+          <p>AWS, Terraform, GitHub Actions, HTML/CSS/JS</p>
+          <h3>Contact</h3>
+          <p>Email and social links will be connected in v1 content pass.</p>
+        </aside>
+      </section>
+
+      <section class="section" aria-labelledby="timeline-title">
+        <div class="section-head" data-reveal>
+          <h2 id="timeline-title">Milestones</h2>
+        </div>
+        <ul class="timeline">
+          <li class="card" data-reveal data-delay="80">
+            <p class="meta">2026</p>
+            <h3>Started building this long-term platform</h3>
+            <p>Defined static-first architecture and experience principles.</p>
+          </li>
+          <li class="card" data-reveal data-delay="140">
+            <p class="meta">2025</p>
+            <h3>Scaled infrastructure and delivery workflows</h3>
+            <p>Focused on maintainable Terraform and dependable CI/CD practices.</p>
+          </li>
+          <li class="card" data-reveal data-delay="200">
+            <p class="meta">Always</p>
+            <h3>Keep learning in public</h3>
+            <p>Write, document, and build artifacts that help people think more clearly.</p>
+          </li>
+        </ul>
+      </section>
+    </main>
+
+    <footer class="site-shell footer">
+      <p>Copyright <span data-year></span> Your Name</p>
+      <p>Personal platform in active evolution.</p>
+    </footer>
+
+    <script src="assets/js/main.js"></script>
+  </body>
+</html>
