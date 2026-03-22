@@ -14,9 +14,28 @@ Build a portfolio that balances:
 ## Profile Focus
 
 This platform introduces me as:
-- Cloud engineer
+- Platform engineer
 - Writer
 - Creator
+
+## Current State (March 2026)
+
+Implemented updates in the static site:
+- Identity and branding synchronized across pages (Home, Projects, Articles, Artworks, About)
+  - Name: Sêng-Gān Ia̍p
+  - Role line: Platform Engineer / Writer / Creator
+- About page content pass completed
+  - Personal narrative refined to reflect engineering + philosophy + creative direction
+  - Snapshot section enriched with core stack and certifications
+  - Contact section connected with real links (email, GitHub, LinkedIn, Medium)
+  - Milestones rewritten with real career timeline and IT Ironman achievement
+- Home page layout tuned
+  - Hero card returned to square presentation
+  - Viewport-aware sizing adjusted to keep header, hero, and footer visible together on typical desktop screens
+  - Typography adjusted to improve name rendering with diacritics
+- Shared UI consistency improvements
+  - Footer identity synchronized across pages
+  - Link affordance improved in milestone reference links
 
 ## Core Goals
 
@@ -173,12 +192,10 @@ Creative work fields:
 
 ## Immediate Next Steps
 
-1. Create site/ static file skeleton (HTML/CSS/JS)
-2. Implement homepage visual direction first
-3. Add shared header/nav/footer component pattern
-4. Build remaining pages with consistent system
-5. Review and refine spacing, typography, and interactions
-6. Prepare Terraform and deployment after UI/content stabilizes
+1. Review and polish mobile layout behavior for the home hero and footer fit
+2. Continue replacing placeholder project/article entries with real content
+3. Add an explicit Experience page (optional) if milestone detail grows
+4. Prepare Terraform and deployment workflows after content pass stabilizes
 
 ## Development Principles
 
