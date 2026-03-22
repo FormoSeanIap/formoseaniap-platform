@@ -1,0 +1,112 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="description" content="Projects in cloud engineering and infrastructure." />
+    <title>Portfolio | Projects</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;700&family=Noto+Sans+JP:wght@400;500&family=Noto+Serif+JP:wght@500;700&display=swap"
+      rel="stylesheet"
+    />
+    <link rel="stylesheet" href="assets/css/variables.css" />
+    <link rel="stylesheet" href="assets/css/base.css" />
+    <link rel="stylesheet" href="assets/css/layout.css" />
+    <link rel="stylesheet" href="assets/css/components.css" />
+  </head>
+  <body data-page="projects">
+    <header class="site-header">
+      <div class="site-shell header-row">
+        <a class="brand" href="index.html">
+          <strong>Your Name</strong>
+          <span>Cloud Engineer / Writer / Creator</span>
+        </a>
+        <nav class="site-nav" aria-label="Main navigation">
+          <ul>
+            <li><a class="nav-link" data-nav="home" href="index.html">Home</a></li>
+            <li><a class="nav-link" data-nav="projects" href="projects.html">Projects</a></li>
+            <li><a class="nav-link" data-nav="articles" href="articles.html">Articles</a></li>
+            <li><a class="nav-link" data-nav="about" href="about.html">About</a></li>
+          </ul>
+        </nav>
+      </div>
+    </header>
+
+    <main class="site-shell">
+      <section class="section">
+        <div class="hero-copy" data-reveal>
+          <p class="kicker">Projects</p>
+          <h1>Selected cloud and infrastructure work.</h1>
+          <p class="lead">
+            Projects focused on reliability, clarity, and practical delivery. Each case balances technical depth with maintainable implementation.
+          </p>
+        </div>
+      </section>
+
+      <section class="section" aria-label="Project list">
+        <div class="grid-2">
+          <article class="card" data-reveal data-delay="40">
+            <p class="meta">2026 / Featured</p>
+            <h3>Personal Portfolio Platform</h3>
+            <p>Static frontend platform with modular Terraform and CloudFront edge delivery.</p>
+            <p><strong>Role:</strong> Product + Platform Engineer</p>
+            <div class="tag-list">
+              <span class="tag">HTML/CSS/JS</span>
+              <span class="tag">Terraform</span>
+              <span class="tag">AWS</span>
+            </div>
+            <a class="button-link" href="#">Case study soon</a>
+          </article>
+
+          <article class="card" data-reveal data-delay="100">
+            <p class="meta">2025</p>
+            <h3>Multi-Env Terraform Foundation</h3>
+            <p>Reusable baseline for managing environment-specific cloud resources with safe defaults.</p>
+            <p><strong>Role:</strong> Infrastructure Engineer</p>
+            <div class="tag-list">
+              <span class="tag">Modules</span>
+              <span class="tag">State</span>
+              <span class="tag">Automation</span>
+            </div>
+            <a class="button-link" href="#">Read overview</a>
+          </article>
+
+          <article class="card" data-reveal data-delay="160">
+            <p class="meta">2025</p>
+            <h3>Delivery Pipeline Hardening</h3>
+            <p>CI/CD improvements that reduced deployment risk and improved release confidence.</p>
+            <p><strong>Role:</strong> DevOps Engineer</p>
+            <div class="tag-list">
+              <span class="tag">GitHub Actions</span>
+              <span class="tag">Quality Gates</span>
+              <span class="tag">IaC</span>
+            </div>
+            <a class="button-link" href="#">Read overview</a>
+          </article>
+
+          <article class="card" data-reveal data-delay="220">
+            <p class="meta">2024</p>
+            <h3>Incident Insight Toolkit</h3>
+            <p>Lightweight runbook and dashboard package for faster triage and team-wide debugging clarity.</p>
+            <p><strong>Role:</strong> SRE/Platform</p>
+            <div class="tag-list">
+              <span class="tag">Runbooks</span>
+              <span class="tag">Monitoring</span>
+              <span class="tag">Ops</span>
+            </div>
+            <a class="button-link" href="#">Read overview</a>
+          </article>
+        </div>
+      </section>
+    </main>
+
+    <footer class="site-shell footer">
+      <p>Copyright <span data-year></span> Your Name</p>
+      <p>Selected projects updated continuously.</p>
+    </footer>
+
+    <script src="assets/js/main.js"></script>
+  </body>
+</html>
