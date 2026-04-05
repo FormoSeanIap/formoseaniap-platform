@@ -3,6 +3,7 @@ name: PR Validate
 on:
   pull_request:
     branches:
+      - develop
       - main
 
 permissions:
