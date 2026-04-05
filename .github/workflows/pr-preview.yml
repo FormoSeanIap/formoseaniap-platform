@@ -1,0 +1,79 @@
+name: PR Preview
+
+on:
+  pull_request:
+    branches:
+      - main
+
+permissions:
+  contents: read
+  id-token: write
+
+concurrency:
+  group: pr-preview-${{ github.event.pull_request.number }}
+  cancel-in-progress: true
+
+jobs:
+  build_preview:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Build generated site artifacts
+        run: python3 scripts/build_articles.py
+
+      - name: Upload preview artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: site-preview-${{ github.event.pull_request.number }}
+          path: site/
+          if-no-files-found: error
+
+      - name: Note hosted preview status
+        if: ${{ vars.AWS_REGION == '' || vars.AWS_PREVIEW_ROLE_ARN == '' || vars.PREVIEW_S3_BUCKET == '' || github.event.pull_request.head.repo.full_name != github.repository }}
+        run: |
+          echo "Hosted preview deploy skipped." >> "$GITHUB_STEP_SUMMARY"
+          echo "- The preview artifact is still attached to this workflow run." >> "$GITHUB_STEP_SUMMARY"
+          if [ "${{ github.event.pull_request.head.repo.full_name }}" != "${{ github.repository }}" ]; then
+            echo "- Hosted preview deploys only run for branches inside this repository." >> "$GITHUB_STEP_SUMMARY"
+          else
+            echo "- Set AWS_REGION, AWS_PREVIEW_ROLE_ARN, and PREVIEW_S3_BUCKET repo variables to enable S3 preview deploys." >> "$GITHUB_STEP_SUMMARY"
+          fi
+
+  deploy_preview:
+    needs: build_preview
+    if: ${{ vars.AWS_REGION != '' && vars.AWS_PREVIEW_ROLE_ARN != '' && vars.PREVIEW_S3_BUCKET != '' && github.event.pull_request.head.repo.full_name == github.repository }}
+    runs-on: ubuntu-latest
+    environment: preview
+
+    steps:
+      - name: Download preview artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: site-preview-${{ github.event.pull_request.number }}
+          path: preview-site
+
+      - name: Configure AWS credentials from GitHub OIDC
+        uses: aws-actions/configure-aws-credentials@v5.1.1
+        with:
+          aws-region: ${{ vars.AWS_REGION }}
+          role-to-assume: ${{ vars.AWS_PREVIEW_ROLE_ARN }}
+          role-session-name: gha-preview-${{ github.event.pull_request.number }}
+
+      - name: Sync preview site to S3
+        run: aws s3 sync preview-site/ "s3://${{ vars.PREVIEW_S3_BUCKET }}/pr-${{ github.event.pull_request.number }}/" --delete
+
+      - name: Invalidate preview CloudFront cache
+        if: ${{ vars.PREVIEW_CLOUDFRONT_DISTRIBUTION_ID != '' }}
+        run: aws cloudfront create-invalidation --distribution-id "${{ vars.PREVIEW_CLOUDFRONT_DISTRIBUTION_ID }}" --paths "/pr-${{ github.event.pull_request.number }}/*"
+
+      - name: Write preview summary
+        if: ${{ vars.PREVIEW_BASE_URL != '' }}
+        run: echo "Preview URL: ${{ vars.PREVIEW_BASE_URL }}/pr-${{ github.event.pull_request.number }}/" >> "$GITHUB_STEP_SUMMARY"
