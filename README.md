@@ -126,9 +126,10 @@ Build-time flow:
 
 ## Repo-Local Codex Config
 
-- `./.codex/config.toml` sets this repository to `workspace-write` with `approval_policy = "on-request"`.
-- In a trusted project, that means Codex can read, edit, and run routine local commands inside this repo without prompting.
-- Codex still asks for approval when it needs to go outside the workspace boundary or use network access.
+- `./.codex/config.toml` sets this repository to `workspace-write` with `approval_policy = "never"`.
+- In a trusted project, that means Codex can read, edit, and run routine local commands inside this repo without approval prompts.
+- This repo-local file is ignored unless the project is trusted. If prompts persist, mark this repo as trusted in Codex or add a user-level entry such as `[projects."/home/ubuntu/non_work/formoseaniap-platform"] trust_level = "trusted"` in `~/.codex/config.toml`.
+- This configuration does not grant network access and does not expand access outside the workspace. If you want broader machine-level access, that must be enabled from your user-level Codex config or launch flags instead of this repo file.
 
 ## AWS OIDC Bootstrap
 
