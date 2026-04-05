@@ -1,0 +1,119 @@
+name: Terraform Plan
+
+on:
+  pull_request:
+    branches:
+      - main
+    paths:
+      - "infra/**"
+      - "**/*.tf"
+      - "**/*.tfvars"
+      - "**/.terraform.lock.hcl"
+
+permissions:
+  contents: read
+  id-token: write
+
+concurrency:
+  group: terraform-plan-${{ github.event.pull_request.number }}
+  cancel-in-progress: true
+
+jobs:
+  enforce_infra_home:
+    runs-on: ubuntu-latest
+    outputs:
+      has_tf: ${{ steps.detect.outputs.has_tf }}
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Ensure Terraform files live under infra/
+        id: detect
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          changed_files="$(git diff --name-only "${{ github.event.pull_request.base.sha }}" "${{ github.event.pull_request.head.sha }}" | grep -E '(^|/).*\.tf$|(^|/).*\.tfvars$|(^|/)\.terraform\.lock\.hcl$' || true)"
+
+          if [ -z "$changed_files" ]; then
+            echo "has_tf=false" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+
+          outside_infra="$(printf '%s\n' "$changed_files" | grep -Ev '^infra/' || true)"
+          if [ -n "$outside_infra" ]; then
+            echo "Terraform files must live under infra/." >&2
+            printf '%s\n' "$outside_infra" >&2
+            exit 1
+          fi
+
+          if find infra -type f -name '*.tf' -print -quit | grep -q .; then
+            echo "has_tf=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "has_tf=false" >> "$GITHUB_OUTPUT"
+            echo "No Terraform root files exist under infra/ yet." >> "$GITHUB_STEP_SUMMARY"
+          fi
+
+  plan:
+    needs: enforce_infra_home
+    if: ${{ needs.enforce_infra_home.outputs.has_tf == 'true' }}
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        shell: bash
+        working-directory: infra
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Set up Terraform
+        uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_wrapper: false
+
+      - name: Terraform fmt
+        run: terraform fmt -check -recursive
+
+      - name: Terraform init for validate
+        run: terraform init -backend=false -input=false
+
+      - name: Terraform validate
+        run: terraform validate -no-color
+
+      - name: Note plan status when AWS is not configured
+        if: ${{ vars.AWS_REGION == '' || vars.AWS_TERRAFORM_PLAN_ROLE_ARN == '' }}
+        run: echo "Set AWS_REGION and AWS_TERRAFORM_PLAN_ROLE_ARN repo variables to enable terraform plan runs." >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Configure AWS credentials from GitHub OIDC
+        if: ${{ vars.AWS_REGION != '' && vars.AWS_TERRAFORM_PLAN_ROLE_ARN != '' }}
+        uses: aws-actions/configure-aws-credentials@v5.1.1
+        with:
+          aws-region: ${{ vars.AWS_REGION }}
+          role-to-assume: ${{ vars.AWS_TERRAFORM_PLAN_ROLE_ARN }}
+          role-session-name: gha-terraform-plan-${{ github.event.pull_request.number }}
+
+      - name: Terraform init for plan
+        if: ${{ vars.AWS_REGION != '' && vars.AWS_TERRAFORM_PLAN_ROLE_ARN != '' }}
+        run: terraform init -input=false
+
+      - name: Terraform plan
+        if: ${{ vars.AWS_REGION != '' && vars.AWS_TERRAFORM_PLAN_ROLE_ARN != '' }}
+        run: terraform plan -input=false -no-color -out=tfplan
+
+      - name: Render textual plan
+        if: ${{ vars.AWS_REGION != '' && vars.AWS_TERRAFORM_PLAN_ROLE_ARN != '' }}
+        run: terraform show -no-color tfplan > tfplan.txt
+
+      - name: Upload plan artifacts
+        if: ${{ vars.AWS_REGION != '' && vars.AWS_TERRAFORM_PLAN_ROLE_ARN != '' }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: terraform-plan-${{ github.event.pull_request.number }}
+          path: |
+            infra/tfplan
+            infra/tfplan.txt
+          if-no-files-found: error

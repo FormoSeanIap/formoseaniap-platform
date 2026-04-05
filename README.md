@@ -18,7 +18,7 @@ This platform introduces me as:
 - Writer
 - Creator
 
-## Current State (April 4, 2026)
+## Current State (April 5, 2026)
 
 Implemented:
 - Shared static pages and branding across Home / Projects / Articles / About.
@@ -41,6 +41,7 @@ Implemented:
   - RSS feeds (EN + ZH)
   - JSON-driven frontend pages (`site/articles.html`, `site/article.html`)
   - JSON-driven Projects page (`site/projects.html`)
+  - GitHub Actions scaffolding for trunk-based PR validation, preview artifacts, optional preview deploys, production site deploys from `main`, and future Terraform plan/apply workflows under `infra/`
 
 ## Architecture
 
@@ -61,6 +62,11 @@ Build-time flow:
 - .github/
   - workflows/
     - aws-oidc-smoke.yml        manual GitHub OIDC -> AWS trust smoke test
+    - pr-validate.yml           PR tests + site build + generated-artifact drift check
+    - pr-preview.yml            PR artifact preview + optional hosted preview deploy
+    - deploy-site-prod.yml      build and deploy the static site from `main`
+    - terraform-plan.yml        Terraform PR checks for `infra/`
+    - terraform-apply-prod.yml  manual prod-gated Terraform apply
 - .codex/
   - config.toml                 repo-local Codex sandbox/approval defaults
   - skills/
@@ -71,11 +77,15 @@ Build-time flow:
   - site.json
 - docs/
   - aws-oidc-github-actions.md  GitHub Actions -> AWS OIDC setup notes
+  - github-branching.md         trunk-based branch + environment workflow
   - examples/
     - aws-oidc-trust-policy-branch.json
     - aws-oidc-trust-policy-environment.json
+    - aws-oidc-trust-policy-pull-request.json
   - inbox.md                quick todo capture
   - backlog.md              curated implementation backlog
+- infra/
+  - README.md                  Terraform home and workflow convention
 - scripts/
   - build_articles.py
   - dedupe_bilingual_images.py
@@ -107,7 +117,23 @@ Build-time flow:
 
 - `./.github/workflows/aws-oidc-smoke.yml` is a manual GitHub Actions workflow that validates GitHub OIDC -> AWS role assumption with `aws sts get-caller-identity`.
 - `./docs/aws-oidc-github-actions.md` explains the role split and the bootstrap sequence for moving this repo onto AWS via GitHub Actions.
-- `./docs/examples/aws-oidc-trust-policy-branch.json` and `./docs/examples/aws-oidc-trust-policy-environment.json` provide branch-scoped and environment-scoped IAM trust policy templates.
+- `./docs/examples/aws-oidc-trust-policy-branch.json`, `./docs/examples/aws-oidc-trust-policy-environment.json`, and `./docs/examples/aws-oidc-trust-policy-pull-request.json` provide branch-scoped, environment-scoped, and PR-scoped IAM trust policy templates.
+
+## Git Workflow
+
+- `main` is the only long-lived branch and the production deployment source.
+- Open `feature/*`, `fix/*`, `chore/*`, `docs/*`, or `hotfix/*` branches from the latest `main`.
+- Merge to `main` through pull requests; prefer squash merges.
+- `develop` is no longer the intended integration branch. Retire it after current work is merged into `main`.
+- GitHub-side branch protection, auto-delete, and merge-strategy settings are documented in `./docs/github-branching.md`.
+
+## CI/CD Workflow
+
+- `./.github/workflows/pr-validate.yml` runs unit tests, rebuilds generated site artifacts, and fails if generated outputs are out of date on pull requests to `main`.
+- `./.github/workflows/pr-preview.yml` uploads a `site/` preview artifact for every pull request to `main` and can optionally sync that preview to S3 when preview variables are configured.
+- `./.github/workflows/deploy-site-prod.yml` rebuilds the static site and deploys only the generated `site/` output from `main` when production AWS variables are configured.
+- `./.github/workflows/terraform-plan.yml` is reserved for Terraform changes under `infra/`, keeps Terraform files under that directory, and runs `fmt`, `validate`, plus an optional OIDC-backed plan.
+- `./.github/workflows/terraform-apply-prod.yml` is a manual production apply workflow gated by the `prod` GitHub environment.
 
 ## Planning Workflow
 
@@ -204,6 +230,11 @@ Site feed metadata is defined in:
 
 Prerequisite:
 - Python 3.10+ (stdlib only, no pip dependencies required)
+
+Run unit tests:
+```bash
+python3 -m unittest discover -s tests -p 'test_*.py'
+```
 
 Generate article data + feeds:
 ```bash
@@ -323,18 +354,11 @@ Important:
 - `site/data/` and RSS are generated artifacts.
 - If build is skipped, new articles/tags/RSS will not appear on production.
 
-## Deployment Plan
+## Infrastructure Home
 
-Target infrastructure:
-- S3 static website hosting
-- CloudFront CDN + HTTPS
-- Optional custom domain
-
-CI/CD recommendations:
-- Trigger on push to `main`
-- Run `python3 scripts/build_articles.py`
-- Sync `site/` to S3
-- Invalidate CloudFront cache when needed
+- Keep Terraform for this repository under `infra/`.
+- Start with a single root stack under `infra/`.
+- If infrastructure later splits into multiple stacks or modules, update the Terraform workflows to target each stack explicitly.
 
 ## Style Direction
 
