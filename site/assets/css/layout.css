@@ -194,4 +194,8 @@ body[data-page="home"] .footer {
   .grid-2 {
     grid-template-columns: 1fr;
   }
+
+  .article-filter-row {
+    gap: 0.45rem;
+  }
 }
