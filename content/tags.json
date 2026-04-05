@@ -1,0 +1,146 @@
+{
+  "technical": {
+    "en": "Technical",
+    "zh": "技術"
+  },
+  "terraform": {
+    "en": "Terraform",
+    "zh": "Terraform"
+  },
+  "architecture": {
+    "en": "Architecture",
+    "zh": "架構"
+  },
+  "philosophy": {
+    "en": "Philosophy",
+    "zh": "哲學"
+  },
+  "review": {
+    "en": "Review",
+    "zh": "評論"
+  },
+  "life-meaning": {
+    "en": "Life Meaning",
+    "zh": "生命意義"
+  },
+  "anime": {
+    "en": "Anime",
+    "zh": "動畫"
+  },
+  "manga": {
+    "en": "Manga",
+    "zh": "漫畫"
+  },
+  "movie": {
+    "en": "Movie",
+    "zh": "電影"
+  },
+  "book": {
+    "en": "Book",
+    "zh": "書"
+  },
+  "game": {
+    "en": "Game",
+    "zh": "遊戲"
+  },
+  "tv-drama": {
+    "en": "TV Drama",
+    "zh": "影集"
+  },
+  "sre": {
+    "en": "SRE",
+    "zh": "SRE"
+  },
+  "aws": {
+    "en": "AWS",
+    "zh": "AWS"
+  },
+  "eks": {
+    "en": "EKS",
+    "zh": "EKS"
+  },
+  "kubernetes": {
+    "en": "Kubernetes",
+    "zh": "Kubernetes"
+  },
+  "operation-deep-dive": {
+    "en": "Operation Deep Dive",
+    "zh": "維運深究"
+  },
+  "operation-diaries": {
+    "en": "Operation Diaries",
+    "zh": "維運札記"
+  },
+  "maintenance-mode": {
+    "en": "Maintenance Mode",
+    "zh": "維護模式"
+  },
+  "system-design": {
+    "en": "System Design",
+    "zh": "系統設計"
+  },
+  "system-outages": {
+    "en": "System Outages",
+    "zh": "系統故障"
+  },
+  "dns": {
+    "en": "DNS",
+    "zh": "DNS"
+  },
+  "incident": {
+    "en": "Incident",
+    "zh": "事故"
+  },
+  "operations": {
+    "en": "Operations",
+    "zh": "維運"
+  },
+  "career": {
+    "en": "Career",
+    "zh": "職涯"
+  },
+  "education": {
+    "en": "Education",
+    "zh": "教育"
+  },
+  "language": {
+    "en": "Language",
+    "zh": "語言"
+  },
+  "gender": {
+    "en": "Gender",
+    "zh": "性別"
+  },
+  "politics": {
+    "en": "Politics",
+    "zh": "政治"
+  },
+  "reflection": {
+    "en": "Reflection",
+    "zh": "反思"
+  },
+  "success": {
+    "en": "Success",
+    "zh": "成功"
+  },
+  "emotion": {
+    "en": "Emotion",
+    "zh": "情緒"
+  },
+  "justice": {
+    "en": "Justice",
+    "zh": "正義"
+  },
+  "non-violence": {
+    "en": "Non-Violence",
+    "zh": "非暴力"
+  },
+  "faith": {
+    "en": "Faith",
+    "zh": "信仰"
+  },
+  "other": {
+    "en": "Other",
+    "zh": "其他"
+  }
+}
