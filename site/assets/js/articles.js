@@ -480,6 +480,21 @@
     return orderedTitles.join(" / ");
   };
 
+  const compareCollections = (a, b, lang) => {
+    const aLatestPublishedAt = String(a.latest_published_at || "");
+    const bLatestPublishedAt = String(b.latest_published_at || "");
+    if (aLatestPublishedAt !== bLatestPublishedAt) {
+      return bLatestPublishedAt.localeCompare(aLatestPublishedAt);
+    }
+
+    const titleCompare = compareLabels(a.title, b.title, lang);
+    if (titleCompare !== 0) {
+      return titleCompare;
+    }
+
+    return String(a.id || "").localeCompare(String(b.id || ""));
+  };
+
   const buildCollections = (uiLang, articles, mergeLanguages) => {
     const grouped = new Map();
     articles.forEach((article) => {
@@ -506,6 +521,10 @@
         });
         const primary = pickPrimaryArticle(groupArticles, uiLang);
         const uniqueCount = new Set(groupArticles.map((article) => article.id)).size;
+        const latestPublishedAt = groupArticles.reduce((latest, article) => {
+          const publishedAt = String(article.published_at || "");
+          return publishedAt > latest ? publishedAt : latest;
+        }, "");
 
         return {
           id: primary.series_id || primary.id,
@@ -519,6 +538,7 @@
           count: uniqueCount,
           languages: langs,
           titlesByLang,
+          latest_published_at: latestPublishedAt,
           series_preview_image:
             primary.series_preview_image ||
             groupArticles.find((article) => article.series_preview_image)?.series_preview_image ||
@@ -526,7 +546,7 @@
           source_article: primary
         };
       })
-      .sort((a, b) => compareLabels(a.title, b.title, uiLang));
+      .sort((a, b) => compareCollections(a, b, uiLang));
   };
 
   const buildCollectionCoverBody = (collection, lang) => {

@@ -286,6 +286,7 @@ Then open:
 
 Collection-first list page UX:
 - `articles.html` shows collection/work cards by default rather than raw article cards.
+- Default collection ordering on `articles.html` is newest-first, based on the latest visible article `published_at` within each collection.
 - Clicking a collection card opens the existing series-scoped article list with `series=<series_id>`.
 - Search is filter-aware and supports `title`, `series`, and `content` modes.
 - Title/content search switches the list into article-result mode; series search keeps collection cards.
