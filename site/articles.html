@@ -15,6 +15,8 @@
     <link rel="stylesheet" href="assets/css/base.css" />
     <link rel="stylesheet" href="assets/css/layout.css" />
     <link rel="stylesheet" href="assets/css/components.css" />
+    <link rel="alternate" type="application/rss+xml" title="Articles RSS (EN)" href="rss.xml" />
+    <link rel="alternate" type="application/rss+xml" title="Articles RSS (ZH)" href="zh/rss.xml" />
   </head>
   <body data-page="articles">
     <header class="site-header">
@@ -42,44 +44,56 @@
           <p class="lead">
             A mix of technical notes and reflective writing about building better software and a better engineering practice.
           </p>
+          <p class="meta">
+            Source content is authored in Markdown and built into JSON data for this page.
+          </p>
+        </div>
+      </section>
+
+      <section class="section" id="series-context-section" aria-label="Series context" hidden>
+        <div class="card series-context-card" data-reveal data-delay="20">
+          <div id="series-context-cover" hidden></div>
+          <p class="kicker" id="series-context-kicker">Series</p>
+          <h2 id="series-context-title">Series</h2>
+          <p class="meta" id="series-context-meta"></p>
+          <div class="article-filter-row" id="series-context-tags" hidden></div>
+          <div class="article-filter-row" id="series-context-actions"></div>
+        </div>
+      </section>
+
+      <section class="section" aria-label="Article filters">
+        <div class="card" data-reveal data-delay="40" data-article-filters>
+          <form class="article-search" id="article-search" role="search">
+            <label class="visually-hidden" for="article-search-input">Search articles</label>
+            <div class="article-search-bar">
+              <input
+                class="article-search-input"
+                id="article-search-input"
+                type="search"
+                name="q"
+                placeholder="Search articles"
+                autocomplete="off"
+              />
+              <div class="article-search-mode-group" role="group" aria-label="Search mode">
+                <button class="tag filter-chip filter-chip-button" type="button" data-search-mode="title">Title</button>
+                <button class="tag filter-chip filter-chip-button" type="button" data-search-mode="series">Series</button>
+                <button class="tag filter-chip filter-chip-button" type="button" data-search-mode="content">Content</button>
+              </div>
+            </div>
+            <p class="meta article-search-status" id="article-search-status"></p>
+          </form>
+          <div class="article-filter-row" id="language-filters"></div>
+          <div class="article-filter-row" id="category-filters"></div>
+          <div class="article-filter-row" id="subcategory-filters"></div>
+          <div class="article-filter-row" id="tag-filters"></div>
+          <p class="meta" id="active-filter-summary"></p>
         </div>
       </section>
 
       <section class="section" aria-label="Article list">
-        <div class="timeline">
-          <article class="card" data-reveal data-delay="40">
-            <p class="meta">Technical / 8 min read</p>
-            <h3>Terraform Modules That Stay Small Under Pressure</h3>
-            <p>Guidelines for keeping modules understandable as requirements evolve.</p>
-            <div class="tag-list">
-              <span class="tag">Terraform</span>
-              <span class="tag">Architecture</span>
-            </div>
-            <a class="button-link" href="#">Read article</a>
-          </article>
-
-          <article class="card" data-reveal data-delay="100">
-            <p class="meta">Technical / 6 min read</p>
-            <h3>Pragmatic Cache Invalidation for Static Platforms</h3>
-            <p>Balancing freshness, performance, and deployment simplicity with CloudFront.</p>
-            <div class="tag-list">
-              <span class="tag">CloudFront</span>
-              <span class="tag">Performance</span>
-            </div>
-            <a class="button-link" href="#">Read article</a>
-          </article>
-
-          <article class="card" data-reveal data-delay="160">
-            <p class="meta">Personal / 4 min read</p>
-            <h3>Engineering Minimalism as Daily Discipline</h3>
-            <p>How constraints and fewer choices can improve quality in design and code.</p>
-            <div class="tag-list">
-              <span class="tag">Philosophy</span>
-              <span class="tag">Workflow</span>
-            </div>
-            <a class="button-link" href="#">Read article</a>
-          </article>
-        </div>
+        <div class="timeline article-grid" id="article-list" data-articles-list></div>
+        <div class="progressive-list-controls" data-articles-list-controls hidden></div>
+        <p class="meta article-empty" id="article-empty" hidden>No articles match the current filters.</p>
       </section>
     </main>
 
@@ -89,5 +103,7 @@
     </footer>
 
     <script src="assets/js/main.js"></script>
+    <script src="assets/js/progressive-list.js"></script>
+    <script src="assets/js/articles.js"></script>
   </body>
 </html>

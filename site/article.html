@@ -3,8 +3,8 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <meta name="description" content="Projects in cloud engineering and infrastructure." />
-    <title>Portfolio | Projects</title>
+    <meta name="description" content="Article detail page." />
+    <title>Portfolio | Article</title>
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link
@@ -15,8 +15,10 @@
     <link rel="stylesheet" href="assets/css/base.css" />
     <link rel="stylesheet" href="assets/css/layout.css" />
     <link rel="stylesheet" href="assets/css/components.css" />
+    <link rel="alternate" type="application/rss+xml" title="Articles RSS (EN)" href="rss.xml" />
+    <link rel="alternate" type="application/rss+xml" title="Articles RSS (ZH)" href="zh/rss.xml" />
   </head>
-  <body data-page="projects">
+  <body data-page="articles">
     <header class="site-header">
       <div class="site-shell header-row">
         <a class="brand" href="index.html">
@@ -34,30 +36,32 @@
       </div>
     </header>
 
-    <main class="site-shell">
+    <main class="site-shell" data-article-detail>
       <section class="section">
-        <div class="hero-copy" data-reveal>
-          <p class="kicker">Projects</p>
-          <h1>Selected cloud and infrastructure work.</h1>
-          <p class="lead">
-            Projects focused on reliability, clarity, and practical delivery. Each case balances technical depth with maintainable implementation.
-          </p>
+        <div class="hero-copy article-top-anchor" id="article-top" data-reveal>
+          <p class="kicker" id="article-kicker">Article</p>
+          <h1 id="article-title">Loading article...</h1>
+          <p class="lead" id="article-excerpt"></p>
+          <p class="meta" id="article-meta"></p>
+          <div class="article-filter-row" id="article-links"></div>
         </div>
       </section>
 
-      <section class="section" aria-label="Project list">
-        <div class="grid-2" data-projects-list></div>
-        <div class="progressive-list-controls" data-projects-list-controls hidden></div>
+      <section class="section">
+        <article class="card" data-reveal data-delay="60">
+          <div class="article-content" id="article-body"></div>
+          <div class="tag-list" id="article-tags"></div>
+        </article>
+        <div class="article-filter-row article-end-actions" id="article-end-links"></div>
       </section>
     </main>
 
     <footer class="site-shell footer">
       <p>Copyright <span data-year></span> Sêng-Gān Ia̍p</p>
-      <p>Selected projects updated continuously.</p>
+      <p>New writing will be published incrementally.</p>
     </footer>
 
     <script src="assets/js/main.js"></script>
-    <script src="assets/js/progressive-list.js"></script>
-    <script src="assets/js/projects.js"></script>
+    <script src="assets/js/articles.js"></script>
   </body>
 </html>
