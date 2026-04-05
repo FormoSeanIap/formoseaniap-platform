@@ -1,6 +1,6 @@
-# Repo-local Codex default: work freely inside this repository,
-# but still ask before leaving the workspace or using network.
-approval_policy = "on-request"
+# Repo-local Codex default: no approval prompts for in-repo work.
+# Keep access limited to this workspace and keep network disabled.
+approval_policy = "never"
 sandbox_mode = "workspace-write"
 allow_login_shell = false
 
