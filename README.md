@@ -49,7 +49,7 @@ Implemented:
   - RSS feeds (EN + ZH)
   - JSON-driven frontend pages (`site/articles.html`, `site/article.html`)
   - JSON-driven Projects page (`site/projects.html`)
-  - GitHub Actions scaffolding for trunk-based PR validation, preview artifacts, optional preview deploys, production site deploys from `main`, and future Terraform plan/apply workflows under `infra/`
+  - GitHub Actions scaffolding for integration-branch PR validation, preview artifacts, optional preview deploys, production site deploys from `main`, and future Terraform plan/apply workflows under `infra/`
 
 ## Architecture
 
@@ -86,7 +86,7 @@ Build-time flow:
   - site.json
 - docs/
   - aws-oidc-github-actions.md  GitHub Actions -> AWS OIDC setup notes
-  - github-branching.md         trunk-based branch + environment workflow
+  - github-branching.md         develop/main branch + environment workflow
   - examples/
     - aws-oidc-trust-policy-branch.json
     - aws-oidc-trust-policy-environment.json
@@ -138,18 +138,20 @@ Build-time flow:
 
 ## Git Workflow
 
-- `main` is the only long-lived branch and the production deployment source.
-- Open `feature/*`, `fix/*`, `chore/*`, `docs/*`, or `hotfix/*` branches from the latest `main`.
-- Merge to `main` through pull requests; prefer squash merges.
-- `develop` is no longer the intended integration branch. Retire it after current work is merged into `main`.
+- `main` is the default branch, the production deployment source, and the only branch that should trigger production deploys.
+- `develop` is the long-lived integration branch for day-to-day work, validation, and preview testing before release.
+- Open `feature/*`, `fix/*`, `chore/*`, and `docs/*` branches from the latest `develop`.
+- Open `hotfix/*` branches from the latest `main`, merge them to `main`, then merge or cherry-pick them back into `develop`.
+- Merge feature work into `develop` through pull requests; prefer squash merges there.
+- Release by opening a pull request from `develop` to `main`; prefer a normal merge commit for release PRs so release boundaries stay visible.
 - GitHub-side branch protection, auto-delete, and merge-strategy settings are documented in `./docs/github-branching.md`.
 
 ## CI/CD Workflow
 
-- `./.github/workflows/pr-validate.yml` runs unit tests, rebuilds generated site artifacts, and fails if generated outputs are out of date on pull requests to `main`.
-- `./.github/workflows/pr-preview.yml` uploads a `site/` preview artifact for every pull request to `main` and can optionally sync that preview to S3 when preview variables are configured.
+- `./.github/workflows/pr-validate.yml` runs unit tests, rebuilds generated site artifacts, and fails if generated outputs are out of date on pull requests to `develop` and `main`.
+- `./.github/workflows/pr-preview.yml` uploads a `site/` preview artifact for every pull request to `develop` and `main`, and can optionally sync that preview to S3 when preview variables are configured.
 - `./.github/workflows/deploy-site-prod.yml` rebuilds the static site and deploys only the generated `site/` output from `main` when production AWS variables are configured.
-- `./.github/workflows/terraform-plan.yml` is reserved for Terraform changes under `infra/`, keeps Terraform files under that directory, and runs `fmt`, `validate`, plus an optional OIDC-backed plan.
+- `./.github/workflows/terraform-plan.yml` is reserved for Terraform changes under `infra/`, keeps Terraform files under that directory, and runs `fmt`, `validate`, plus an optional OIDC-backed plan on pull requests to `develop` and `main`.
 - `./.github/workflows/terraform-apply-prod.yml` is a manual production apply workflow gated by the `prod` GitHub environment.
 
 ## Planning Workflow

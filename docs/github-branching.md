@@ -1,37 +1,50 @@
 # GitHub Branching and Environment Workflow
 
-This repository now uses trunk-based branching.
+This repository uses a two-tier branch model.
 
 ## Branch Model
 
-- `main` is the only long-lived branch and the production deployment source.
-- Open short-lived branches from the latest `main` using `feature/`, `fix/`, `chore/`, `docs/`, or `hotfix/`.
-- Merge back with a pull request into `main`.
-- Prefer squash merges so each merged pull request lands as one reviewed change on `main`.
+- `main` is the default branch, the production deployment source, and the only branch that should trigger production deploys.
+- `develop` is the long-lived integration branch for day-to-day work, PR validation, and preview testing.
+- Open short-lived `feature/*`, `fix/*`, `chore/*`, and `docs/*` branches from the latest `develop`.
+- Open `hotfix/*` branches from the latest `main`.
+- Merge feature work into `develop` with pull requests.
+- Release by opening a pull request from `develop` to `main`.
+
+## Merge Policy
+
+- Prefer squash merges for feature PRs into `develop` so integration history stays compact.
+- Prefer a normal merge commit for `develop` to `main` release PRs so release boundaries remain visible in history.
+- After merging a `hotfix/*` branch to `main`, immediately merge or cherry-pick the same fix back into `develop`.
 
 ## GitHub Settings To Apply
 
-1. Set the default branch to `main`.
+1. Keep the default branch set to `main`.
 2. Protect `main`:
    - require pull requests before merging
    - require the `validate` job from `PR Validate`
    - block force pushes
    - block direct deletion
-3. In repository settings:
+3. Protect `develop`:
+   - require pull requests before merging
+   - require the `validate` job from `PR Validate`
+   - block force pushes
+   - block direct deletion
+4. In repository settings:
    - enable auto-delete for merged branches
-   - make squash merge the default or only merge strategy
-4. Create GitHub environments:
+   - make squash merge available for feature PRs
+5. Create GitHub environments:
    - `preview` for optional PR preview deploys
    - `prod` for production site deploys and manual Terraform apply
-5. Protect `prod` with required reviewers before AWS credentials are issued.
+6. Protect `prod` with required reviewers before AWS credentials are issued.
 
-## Current Migration Off `develop`
+## Release Flow
 
-1. Merge the current `develop` work into `main`.
-2. Retarget any open pull requests from `develop` to `main`.
-3. Stop opening new work from `develop`.
-4. Delete `develop` after `main` is the source of truth.
-5. Rebase or merge stale feature branches onto `main` before continuing work.
+1. Branch from `develop` for normal work.
+2. Merge reviewed feature PRs into `develop`.
+3. Let PR validation, preview, and Terraform plan run on `develop` PRs.
+4. Open a release PR from `develop` to `main`.
+5. Merge that release PR to trigger production deployment from `main`.
 
 ## Repo Variables For Workflow Activation
 
@@ -50,8 +63,8 @@ Set these as GitHub repository variables when the AWS side is ready:
 
 ## Resulting Workflow Split
 
-- `PR Validate`: tests, site build, and generated-artifact drift check on pull requests to `main`
-- `PR Preview`: preview artifact on every pull request and optional hosted preview deploy
+- `PR Validate`: tests, site build, and generated-artifact drift check on pull requests to `develop` and `main`
+- `PR Preview`: preview artifact on every pull request to `develop` and `main`, plus optional hosted preview deploy
 - `Deploy Site Prod`: build on `main` and deploy only the static `site/` output to production
-- `Terraform Plan`: enforce `infra/` placement and run Terraform checks on pull requests
+- `Terraform Plan`: enforce `infra/` placement and run Terraform checks on pull requests to `develop` and `main`
 - `Terraform Apply Prod`: manual, production-gated apply from `main`
