@@ -2,7 +2,7 @@
 
 Long-term portfolio platform for identity, technical work, and writing.
 
-This project is static-first and deploys to S3/CloudFront without backend APIs or databases.
+This project is static-first and deploys to S3/CloudFront, with a small serverless podcast proxy for CORS-safe RSS reads.
 
 ## Vision
 
@@ -21,8 +21,16 @@ This platform introduces me as:
 ## Current State (April 5, 2026)
 
 Implemented:
-- Shared static pages and branding across Home / Projects / Articles / About.
+- Shared static pages and branding across Home / Projects / Podcasts / Articles / About.
 - Consistent design system via `site/assets/css/*` and `site/assets/js/main.js`.
+- Runtime-loaded podcast section:
+  - Dedicated `site/podcasts.html` page
+  - Homepage teaser for the newest configured episode
+  - Local show config in `site/data/podcasts.shows.json`
+  - Proxy-first RSS loading from configured public podcast feeds on refresh
+  - Icon-first platform actions on show and episode cards
+  - Per-show platform links and per-feed failure fallback states
+  - Local Python proxy for preview and AWS Lambda Function URL scaffolding for production
 - Python-based article build pipeline:
   - Markdown source in `content/articles/**`
   - Metadata index JSON
@@ -45,9 +53,10 @@ Implemented:
 
 ## Architecture
 
-Static-only runtime:
+Static-first runtime:
 - S3 serves HTML/CSS/JS/JSON/XML files.
-- No API server and no runtime database.
+- No application backend or runtime database is used for core site pages.
+- `podcasts.html` reads configured public RSS feeds through a small podcast proxy, so newly published episodes can appear after refresh without rebuilding the repo.
 
 Build-time flow:
 1. Author Markdown in `content/articles/**`
@@ -86,16 +95,24 @@ Build-time flow:
   - backlog.md              curated implementation backlog
 - infra/
   - README.md                  Terraform home and workflow convention
+  - main.tf                    AWS Lambda Function URL for podcast RSS proxy
+  - variables.tf               proxy Terraform variables
+  - outputs.tf                 proxy Function URL output
 - scripts/
   - build_articles.py
   - dedupe_bilingual_images.py
+  - podcast_proxy.py          local + Lambda-compatible podcast RSS proxy
 - site/
   - assets/
-  - data/                    generated article JSON
+    - css/podcasts.css       podcast-specific page and teaser styling
+    - js/podcasts.js         runtime RSS loading + podcast rendering
+  - data/                    generated article JSON + podcast runtime config
     - articles.search.json   lazy-loaded article search index
     - projects.json          project listing data
+    - podcasts.shows.json    configured podcast feeds + platform links
   - articles.html            list/filter page
   - article.html             detail page
+  - podcasts.html            runtime-loaded podcast landing page
   - projects.html            project list page
   - rss.xml                  generated EN feed
   - zh/rss.xml               generated ZH feed
@@ -267,6 +284,10 @@ Generated outputs:
 - `site/rss.xml`
 - `site/zh/rss.xml`
 
+Podcast runtime config:
+- `site/data/podcasts.shows.json` is source-of-truth for podcast show metadata, feed URLs, and platform links.
+- Podcast episodes are not built into generated artifacts; the browser loads configured feeds live through the podcast proxy at page load.
+
 ## Local Preview
 
 Use any static server that serves the `site/` directory.
@@ -277,12 +298,56 @@ cd site
 python3 -m http.server 5500
 ```
 
+For podcast preview on localhost, run the local proxy in a second terminal from the repo root:
+
+```bash
+python3 scripts/podcast_proxy.py
+```
+
 Then open:
+- `http://127.0.0.1:5500/index.html`
 - `http://127.0.0.1:5500/articles.html`
 - `http://127.0.0.1:5500/articles.html?lang=en&lang=zh&category=review&subcategory=Anime_Manga`
 - `http://127.0.0.1:5500/article.html?id=terraform-modules-small&lang=en`
 - `http://127.0.0.1:5500/articles.html?series=<series_id>&lang=en&lang=zh`
+- `http://127.0.0.1:5500/podcasts.html`
 - `http://127.0.0.1:5500/projects.html`
+
+## Podcast Runtime Config
+
+The podcasts section is configured in `site/data/podcasts.shows.json`.
+
+Expected shape:
+
+```json
+{
+  "proxy_url": "https://your-podcast-proxy.example.com/podcast-feed",
+  "shows": [
+    {
+      "id": "my-show",
+      "title": "My Show",
+      "feed_url": "https://public-feed.example.com/rss.xml",
+      "description": "Short show description.",
+      "cover_image": "",
+      "order": 1,
+      "links": {
+        "soundon": "https://...",
+        "spotify": "https://...",
+        "apple": "https://...",
+        "kkbox": "https://..."
+      }
+    }
+  ]
+}
+```
+
+Behavior:
+- `index.html` shows the newest episode across all configured feeds in the podcast teaser.
+- `podcasts.html` shows the newest episode globally, then groups the latest 5 loaded episodes per show without removing the featured episode from its show list.
+- Refreshing the page triggers live feed reads through the podcast proxy; publishing a new episode does not require running `scripts/build_articles.py`.
+- If a feed cannot be read in the browser, the page falls back to show-level copy and platform links while leaving other feeds intact.
+- On `127.0.0.1` or `localhost`, leaving `proxy_url` blank makes the frontend try `http://127.0.0.1:8787/podcast-feed` automatically for local preview.
+- In production, set `proxy_url` to the Terraform output `podcast_proxy_function_url` and redeploy the site.
 
 Collection-first list page UX:
 - `articles.html` shows collection/work cards by default rather than raw article cards.

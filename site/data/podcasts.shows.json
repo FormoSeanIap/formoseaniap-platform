@@ -1,0 +1,33 @@
+{
+  "proxy_url": "",
+  "shows": [
+    {
+      "id": "around-the-corner-zh",
+      "title": "前方的轉角",
+      "feed_url": "https://feeds.soundon.fm/podcasts/f53cfad4-ca02-4b09-9b3a-ec899eef5ff8.xml",
+      "description": "在《前方的轉角》，我相信只要再往前走一點，真理或新的知識就藏在轉角處。讓我們一同漫步於哲學、時事與社會議題之間，尋找那些被忽略的觀點與思考。",
+      "cover_image": "",
+      "order": 1,
+      "links": {
+        "soundon": "https://player.soundon.fm/p/f53cfad4-ca02-4b09-9b3a-ec899eef5ff8",
+        "spotify": "https://open.spotify.com/show/0olNhvE6mext6zP2ttWzQO",
+        "apple": "https://podcasts.apple.com/tw/podcast/%E5%89%8D%E6%96%B9%E7%9A%84%E8%BD%89%E8%A7%92/id1818104240",
+        "kkbox": ""
+      }
+    },
+    {
+      "id": "around-the-corner-en",
+      "title": "Around the Corner (Sêng-Gān)",
+      "feed_url": "https://feeds.soundon.fm/podcasts/091b2893-9237-4488-a2fd-7a018647f91d.xml",
+      "description": "At \"Around the Corner,\" I believe that if we take just one more step forward, truth or new knowledge lies waiting at the corner. Let’s stroll together through philosophy, current events, and social issues, in search of overlooked perspectives and thoughts.",
+      "cover_image": "",
+      "order": 2,
+      "links": {
+        "soundon": "https://player.soundon.fm/p/091b2893-9237-4488-a2fd-7a018647f91d",
+        "spotify": "https://open.spotify.com/show/2yKXWzAso7PjT3grt8DvPf",
+        "apple": "https://podcasts.apple.com/us/podcast/around-the-corner-s%C3%AAng-g%C4%81n/id1822013713",
+        "kkbox": ""
+      }
+    }
+  ]
+}

@@ -30,6 +30,12 @@ __pycache__/
 *.pyc
 .pytest_cache/
 
+# Terraform
+.terraform/
+*.tfstate
+*.tfstate.*
+infra/build/
+
 # OS/editor artifacts
 .DS_Store
 Thumbs.db
