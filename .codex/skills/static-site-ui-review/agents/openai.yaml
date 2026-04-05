@@ -1,0 +1,4 @@
+interface:
+  display_name: "Static Site UI Review"
+  short_description: "Review UI changes for this static site repo"
+  default_prompt: "Use $static-site-ui-review to review the frontend change I made in this static portfolio repo."
