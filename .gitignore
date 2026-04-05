@@ -1,0 +1,39 @@
+# Dependencies
+node_modules/
+
+# Build output
+dist/
+.cache/
+site/data/
+!site/data/
+site/data/articles/
+site/data/articles.index.json
+site/data/articles.search.json
+!site/data/projects.json
+site/rss.xml
+site/zh/rss.xml
+site/assets/articles/
+
+# Logs
+*.log
+npm-debug.log*
+yarn-debug.log*
+pnpm-debug.log*
+
+# Local environment files
+.env
+.env.*
+!.env.example
+
+# Python cache
+__pycache__/
+*.pyc
+.pytest_cache/
+
+# OS/editor artifacts
+.DS_Store
+Thumbs.db
+*.swp
+*.swo
+.vscode/
+.idea/
