@@ -4,6 +4,8 @@
 
 html {
   scroll-behavior: smooth;
+  color-scheme: var(--color-scheme);
+  background-color: var(--bg);
 }
 
 body {
@@ -12,10 +14,7 @@ body {
   font-size: var(--step-0);
   line-height: 1.65;
   color: var(--text);
-  background:
-    radial-gradient(circle at 12% 8%, rgba(255, 255, 255, 0.08), transparent 40%),
-    radial-gradient(circle at 88% 14%, rgba(255, 255, 255, 0.05), transparent 36%),
-    var(--bg);
+  background: var(--body-background);
   min-height: 100vh;
 }
 
@@ -25,7 +24,7 @@ body::before {
   inset: 0;
   pointer-events: none;
   opacity: 0.2;
-  background-image: linear-gradient(to right, rgba(255, 255, 255, 0.04) 1px, transparent 1px);
+  background-image: var(--grid-pattern);
   background-size: 32px 32px;
   z-index: -1;
 }

@@ -18,11 +18,15 @@ This platform introduces me as:
 - Writer
 - Creator
 
-## Current State (April 5, 2026)
+## Current State (April 6, 2026)
 
 Implemented:
 - Shared static pages and branding across Home / Projects / Podcasts / Articles / About.
 - Consistent design system via `site/assets/css/*` and `site/assets/js/main.js`.
+- Shared theme system across all top-level pages:
+  - Visible `Auto` / `Light` / `Dark` header control
+  - First-load system preference follow
+  - Explicit theme persistence via `localStorage` (`theme-preference`)
 - Runtime-loaded podcast section:
   - Dedicated `site/podcasts.html` page
   - Local show config in `site/data/podcasts.shows.json`

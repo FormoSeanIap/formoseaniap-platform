@@ -5,6 +5,16 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <meta name="description" content="Creative and visual works." />
     <title>Portfolio | Artworks</title>
+    <script>
+      (() => {
+        try {
+          const preference = localStorage.getItem("theme-preference");
+          if (preference === "light" || preference === "dark") {
+            document.documentElement.dataset.theme = preference;
+          }
+        } catch (error) {}
+      })();
+    </script>
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link
@@ -23,15 +33,25 @@
           <strong>Sêng-Gān Ia̍p</strong>
           <span>Platform Engineer / Writer / Creator</span>
         </a>
-        <nav class="site-nav" aria-label="Main navigation">
-          <ul>
-            <li><a class="nav-link" data-nav="home" href="index.html">Home</a></li>
-            <li><a class="nav-link" data-nav="projects" href="projects.html">Projects</a></li>
-            <li><a class="nav-link" data-nav="podcasts" href="podcasts.html">Podcasts</a></li>
-            <li><a class="nav-link" data-nav="articles" href="articles.html">Articles</a></li>
-            <li><a class="nav-link" data-nav="about" href="about.html">About</a></li>
-          </ul>
-        </nav>
+        <div class="header-actions">
+          <nav class="site-nav" aria-label="Main navigation">
+            <ul>
+              <li><a class="nav-link" data-nav="home" href="index.html">Home</a></li>
+              <li><a class="nav-link" data-nav="projects" href="projects.html">Projects</a></li>
+              <li><a class="nav-link" data-nav="podcasts" href="podcasts.html">Podcasts</a></li>
+              <li><a class="nav-link" data-nav="articles" href="articles.html">Articles</a></li>
+              <li><a class="nav-link" data-nav="about" href="about.html">About</a></li>
+            </ul>
+          </nav>
+          <div class="theme-switcher" role="group" aria-label="Color theme">
+            <span class="theme-switch-label">Theme</span>
+            <div class="theme-switch-options">
+              <button class="theme-option" type="button" data-theme-option="system" aria-pressed="false">Auto</button>
+              <button class="theme-option" type="button" data-theme-option="light" aria-pressed="false">Light</button>
+              <button class="theme-option" type="button" data-theme-option="dark" aria-pressed="false">Dark</button>
+            </div>
+          </div>
+        </div>
       </div>
     </header>
 

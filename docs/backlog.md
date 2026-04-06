@@ -20,7 +20,4 @@ Curated follow-up work for the portfolio platform.
 
 ## Later
 
-- [ ] Add theme toggle and light mode support
-  - Why: the site currently feels dark-mode-first, and there is no user-facing theme choice.
-  - Scope: `site/assets/css/**`, `site/assets/js/**`, shared page templates, theme persistence or system-preference handling.
-  - Done when: the site supports both dark and light mode, and the user can switch themes without breaking page readability or layout.
+- _None_
