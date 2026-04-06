@@ -146,18 +146,30 @@ body[data-page="projects"] .hero {
 
 body[data-page="home"] .landing-main {
   min-height: calc(100vh - 190px);
+  width: 100%;
+  max-width: none;
   padding: var(--space-2) 0;
+  padding-inline: 1rem;
+}
+
+body[data-page="home"] .home-landing-wrap {
+  width: 100%;
+  display: grid;
+  justify-items: center;
 }
 
 body[data-page="home"] .landing {
-  width: min(100%, min(74vh, 900px));
+  width: min(100%, clamp(40rem, 52vw, 56rem));
   aspect-ratio: 1 / 1;
   min-height: 0;
 }
 
 body[data-page="home"] .landing-overlay {
   min-height: 100%;
-  padding: clamp(1rem, 2.4vh, 1.75rem);
+  width: min(100%, 42rem);
+  margin-inline: auto;
+  gap: clamp(1rem, 2.4vh, 1.7rem);
+  padding: clamp(1.2rem, 2.8vh, 2rem);
 }
 
 body[data-page="home"] .footer {
@@ -166,9 +178,21 @@ body[data-page="home"] .footer {
   text-align: center;
 }
 
-@media (max-height: 820px) {
+@media (max-height: 820px) and (min-width: 901px) {
   body[data-page="home"] .landing {
-    width: min(100%, min(64vh, 760px));
+    width: min(100%, min(62vh, 37.8rem));
+  }
+}
+
+@media (min-width: 1800px) {
+  body[data-page="home"] .landing {
+    width: min(100%, 62vw, 68vh, 82rem);
+  }
+
+  body[data-page="home"] .landing-overlay {
+    width: min(100%, 46rem);
+    gap: clamp(1.1rem, 2.3vh, 1.8rem);
+    padding: clamp(1.3rem, 2.8vh, 2.2rem);
   }
 }
 
@@ -180,6 +204,10 @@ body[data-page="home"] .footer {
 
   main {
     padding-top: var(--space-6);
+  }
+
+  body[data-page="home"] .landing {
+    width: min(100%, 840px);
   }
 }
 
@@ -201,5 +229,20 @@ body[data-page="home"] .footer {
 
   .article-filter-row {
     gap: 0.45rem;
+  }
+
+  body[data-page="home"] .landing-main {
+    min-height: auto;
+    padding: var(--space-4) 0;
+  }
+
+  body[data-page="home"] .landing {
+    width: 100%;
+    aspect-ratio: auto;
+    min-height: 31rem;
+  }
+
+  body[data-page="home"] .landing-overlay {
+    width: 100%;
   }
 }

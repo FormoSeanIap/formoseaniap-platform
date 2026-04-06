@@ -25,7 +25,6 @@ Implemented:
 - Consistent design system via `site/assets/css/*` and `site/assets/js/main.js`.
 - Runtime-loaded podcast section:
   - Dedicated `site/podcasts.html` page
-  - Homepage teaser for the newest configured episode
   - Local show config in `site/data/podcasts.shows.json`
   - Proxy-first RSS loading from configured public podcast feeds on refresh
   - Icon-first platform actions on show and episode cards
@@ -105,8 +104,8 @@ Build-time flow:
   - podcast_proxy.py          local + Lambda-compatible podcast RSS proxy
 - site/
   - assets/
-    - css/podcasts.css       podcast-specific page and teaser styling
-    - js/podcasts.js         runtime RSS loading + podcast rendering
+    - css/podcasts.css       podcast-specific page styling
+    - js/podcasts.js         runtime RSS loading + podcast rendering for `podcasts.html`
   - data/                    generated article JSON + podcast runtime config
     - articles.search.json   lazy-loaded article search index
     - projects.json          project case-study data
@@ -347,7 +346,6 @@ Expected shape:
 ```
 
 Behavior:
-- `index.html` shows the newest episode across all configured feeds in the podcast teaser.
 - `podcasts.html` shows the newest episode globally, then groups the latest 5 loaded episodes per show without removing the featured episode from its show list.
 - Refreshing the page triggers live feed reads through the podcast proxy; publishing a new episode does not require running `scripts/build_articles.py`.
 - If a feed cannot be read in the browser, the page falls back to show-level copy and platform links while leaving other feeds intact.
