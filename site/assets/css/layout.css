@@ -72,6 +72,10 @@ body[data-page="about"] .hero {
   grid-template-columns: 1.45fr 1.15fr;
 }
 
+body[data-page="projects"] .hero {
+  grid-template-columns: 1fr;
+}
+
 .hero-copy {
   display: grid;
   gap: var(--space-4);

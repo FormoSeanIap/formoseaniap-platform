@@ -3,7 +3,10 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <meta name="description" content="Projects in cloud engineering and infrastructure." />
+    <meta
+      name="description"
+      content="Real projects spanning workflow automation, full-stack product work, and the platform behind this site."
+    />
     <title>Portfolio | Projects</title>
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
@@ -36,17 +39,55 @@
     </header>
 
     <main class="site-shell">
-      <section class="section">
+      <section class="section hero project-hero">
         <div class="hero-copy" data-reveal>
           <p class="kicker">Projects</p>
-          <h1>Selected cloud and infrastructure work.</h1>
+          <h1>Real projects, shaped by real constraints.</h1>
           <p class="lead">
-            Projects focused on reliability, clarity, and practical delivery. Each case balances technical depth with maintainable implementation.
+            A focused set of work across platform engineering, workflow automation, and product delivery.
+          </p>
+          <p>
+            Some code is public now. Some is still private while I prepare it for release. The goal here is to show work honestly, not pad the page with generic demos.
           </p>
         </div>
       </section>
 
-      <section class="section" aria-label="Project list">
+      <section class="section" aria-labelledby="projects-map-title">
+        <div class="section-head" data-reveal>
+          <div>
+            <p class="kicker">Project Map</p>
+            <h2 id="projects-map-title">Three threads running through the portfolio.</h2>
+          </div>
+        </div>
+
+        <div class="grid-3 project-overview-grid">
+          <article class="card project-overview-card" data-reveal data-delay="40">
+            <p class="meta">Current / This repo</p>
+            <h3>Platform</h3>
+            <p>Static-first site architecture, publishing flow, and deployment foundations.</p>
+          </article>
+
+          <article class="card project-overview-card" data-reveal data-delay="100">
+            <p class="meta">Private for now</p>
+            <h3>Workflow Automation</h3>
+            <p>Tools that compress repetitive job-search and application work into a cleaner system.</p>
+          </article>
+
+          <article class="card project-overview-card" data-reveal data-delay="160">
+            <p class="meta">2022 / Public repo</p>
+            <h3>Product Delivery</h3>
+            <p>Earlier full-stack work that still reflects how I scope, ship, and structure an application.</p>
+          </article>
+        </div>
+      </section>
+
+      <section class="section" aria-labelledby="projects-list-title">
+        <div class="section-head">
+          <div>
+            <p class="kicker">Selected Work</p>
+            <h2 id="projects-list-title">Projects that map the arc of my engineering work.</h2>
+          </div>
+        </div>
         <div class="grid-2" data-projects-list></div>
         <div class="progressive-list-controls" data-projects-list-controls hidden></div>
       </section>

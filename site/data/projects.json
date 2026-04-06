@@ -1,45 +1,70 @@
 {
-  "generated_at": "2026-04-04T00:00:00Z",
+  "generated_at": "2026-04-06T00:00:00Z",
   "projects": [
     {
-      "meta": "2026 / Featured",
-      "title": "Personal Portfolio Platform",
-      "excerpt": "Static frontend platform with modular Terraform and CloudFront edge delivery.",
+      "meta": "2026 / Current project",
+      "kind": "Portfolio infrastructure",
+      "status_label": "Current platform",
+      "status_tone": "current",
+      "featured": true,
+      "title": "FormoSeanIap Platform",
+      "summary": "The static-first portfolio platform you are on right now: projects, long-form writing, and podcasts presented through a shared design system with deployment-ready AWS scaffolding.",
+      "context": "I built it as a durable home for technical work and personal writing, not as a one-off resume site. The emphasis is clear structure, lightweight runtime behavior, and long-term maintainability.",
       "role": "Product + Platform Engineer",
-      "tags": ["HTML/CSS/JS", "Terraform", "AWS"],
-      "link_href": "#",
-      "link_label": "Case study soon",
-      "link_external": false
+      "tags": ["HTML/CSS/JS", "Python", "AWS", "Terraform", "GitHub Actions"],
+      "highlights": [
+        "JSON-driven pages keep site structure simple while still allowing richer content and progressive loading where it matters.",
+        "The article pipeline generates metadata, search data, per-article JSON, and RSS feeds from local Markdown sources.",
+        "Podcast support uses a small proxy-first approach so new episodes can appear after refresh without rebuilding the whole site."
+      ],
+      "links": [
+        {
+          "href": "https://github.com/FormoSeanIap/formoseaniap-platform",
+          "label": "View repository",
+          "external": true
+        }
+      ]
     },
     {
-      "meta": "2025",
-      "title": "Multi-Env Terraform Foundation",
-      "excerpt": "Reusable baseline for managing environment-specific cloud resources with safe defaults.",
-      "role": "Infrastructure Engineer",
-      "tags": ["Modules", "State", "Automation"],
-      "link_href": "#",
-      "link_label": "Read overview",
-      "link_external": false
+      "meta": "2026 / Private for now",
+      "kind": "Workflow automation",
+      "status_label": "Private repo",
+      "status_tone": "private",
+      "title": "Job Application Toolkit",
+      "summary": "A monorepo for automating the job application workflow: discover relevant LinkedIn roles, generate tailored materials, track them in Notion, and accelerate application forms with a Chrome extension.",
+      "context": "The project is split into two tools. job_finder handles scraping, filtering, cover-letter generation, CSV output, and Notion sync. form_filler focuses on semi-automatic application filling with deterministic profile mapping plus AI help for nuanced questions.",
+      "role": "Product Engineer / Workflow Designer",
+      "tags": ["Python", "Playwright", "OpenAI", "Notion API", "Chrome Extension"],
+      "highlights": [
+        "LinkedIn scraping flow with deduplication, clearance filtering, AWS keyword matching, and AI-generated cover letters.",
+        "Two-stage workflow: shortlist roles in Notion, then open the links and use the extension for assisted application filling.",
+        "AI is used selectively for ambiguous questions while deterministic profile data stays local and predictable."
+      ],
+      "availability_note": "Private while I prepare the repository for a cleaner public release.",
+      "links": []
     },
     {
-      "meta": "2025",
-      "title": "Delivery Pipeline Hardening",
-      "excerpt": "CI/CD improvements that reduced deployment risk and improved release confidence.",
-      "role": "DevOps Engineer",
-      "tags": ["GitHub Actions", "Quality Gates", "IaC"],
-      "link_href": "#",
-      "link_label": "Read overview",
-      "link_external": false
-    },
-    {
-      "meta": "2024",
-      "title": "Incident Insight Toolkit",
-      "excerpt": "Lightweight runbook and dashboard package for faster triage and team-wide debugging clarity.",
-      "role": "SRE/Platform",
-      "tags": ["Runbooks", "Monitoring", "Ops"],
-      "link_href": "#",
-      "link_label": "Read overview",
-      "link_external": false
+      "meta": "2022 / AppWorks School capstone",
+      "kind": "Full-stack product",
+      "status_label": "Public repo",
+      "status_tone": "public",
+      "title": "DocuBloom",
+      "summary": "A collaborative API documentation product where developers can write readable docs, share mock responses, and keep front-end work moving even when the upstream server is unavailable.",
+      "context": "DocuBloom treated API documentation as a working product surface rather than static reference text. It combined authoring, testing, collaboration, and deployment concerns into one system.",
+      "role": "Full-stack Engineer",
+      "tags": ["Node.js", "Express", "React", "MongoDB", "Redis", "Docker", "AWS"],
+      "highlights": [
+        "Supports API testing, collaborator management, and mock-response URLs for interrupted back-end workflows.",
+        "The repository documents system design choices including deployment architecture, database design, and error-handling flow.",
+        "Infrastructure and performance constraints were considered early, including a low-cost deployment target and load-testing goals."
+      ],
+      "links": [
+        {
+          "href": "https://github.com/FormoSeanIap/docubloom",
+          "label": "View repository",
+          "external": true
+        }
+      ]
     }
   ]
 }
