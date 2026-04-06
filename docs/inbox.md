@@ -8,4 +8,4 @@ Use this file for fast, low-friction capture when an idea appears before it is r
 
 ## Open
 
-- _Empty_
+- Audit the repo for personal or sensitive information before making the GitHub project public; identify any resulting security or privacy risk.
