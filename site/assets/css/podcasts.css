@@ -21,11 +21,9 @@
   position: relative;
   width: 100%;
   overflow: hidden;
-  border: 1px solid rgba(255, 255, 255, 0.08);
+  border: 1px solid var(--line);
   border-radius: calc(var(--radius) - 2px);
-  background:
-    linear-gradient(180deg, rgba(8, 8, 8, 0.12), rgba(8, 8, 8, 0.78)),
-    radial-gradient(circle at top left, rgba(255, 255, 255, 0.18), transparent 36%);
+  background: var(--media-fallback-background);
 }
 
 .podcast-media--feature,
@@ -60,7 +58,7 @@
 }
 
 .podcast-media__eyebrow {
-  color: rgba(255, 255, 255, 0.78);
+  color: var(--media-text);
 }
 
 .podcast-media__title {
@@ -71,7 +69,7 @@
 }
 
 .podcast-media__subline {
-  color: rgba(255, 255, 255, 0.68);
+  color: var(--media-text-soft);
 }
 
 .podcast-content {
@@ -103,7 +101,7 @@
   width: 2.45rem;
   height: 2.45rem;
   padding: 0;
-  background-color: rgba(255, 255, 255, 0.03);
+  background-color: var(--surface-soft);
   border-bottom: 1px solid var(--line);
   transition: border-color var(--motion-fast) var(--ease-standard),
     background-color var(--motion-fast) var(--ease-standard),
@@ -115,7 +113,7 @@
 .podcast-platform-link:focus-visible {
   transform: translateY(-1px);
   border-color: var(--accent-soft);
-  background-color: rgba(255, 255, 255, 0.08);
+  background-color: var(--hover-fill);
 }
 
 .podcast-platform-link::after {
@@ -128,8 +126,8 @@
   max-width: 18rem;
   padding: 0.42rem 0.65rem;
   border-radius: 0.65rem;
-  background-color: rgba(12, 12, 12, 0.96);
-  border: 1px solid rgba(255, 255, 255, 0.12);
+  background-color: var(--tooltip-background);
+  border: 1px solid var(--tooltip-border);
   color: var(--text);
   font-size: 0.72rem;
   line-height: 1.35;
@@ -153,9 +151,9 @@
   width: 0.6rem;
   height: 0.6rem;
   transform: translateX(-50%) rotate(45deg);
-  background-color: rgba(12, 12, 12, 0.96);
-  border-right: 1px solid rgba(255, 255, 255, 0.12);
-  border-bottom: 1px solid rgba(255, 255, 255, 0.12);
+  background-color: var(--tooltip-background);
+  border-right: 1px solid var(--tooltip-border);
+  border-bottom: 1px solid var(--tooltip-border);
   pointer-events: none;
   opacity: 0;
   visibility: hidden;
@@ -185,26 +183,26 @@
 
 .podcast-platform-link--soundon {
   color: var(--text-soft);
-  border-color: rgba(183, 183, 183, 0.28);
-  background-color: rgba(255, 255, 255, 0.04);
+  border-color: var(--line-strong);
+  background-color: var(--surface-soft);
 }
 
 .podcast-platform-link--spotify {
   color: var(--text-soft);
-  border-color: rgba(183, 183, 183, 0.28);
-  background-color: rgba(255, 255, 255, 0.04);
+  border-color: var(--line-strong);
+  background-color: var(--surface-soft);
 }
 
 .podcast-platform-link--apple {
   color: var(--text-soft);
-  border-color: rgba(183, 183, 183, 0.28);
-  background-color: rgba(255, 255, 255, 0.04);
+  border-color: var(--line-strong);
+  background-color: var(--surface-soft);
 }
 
 .podcast-platform-link--kkbox {
   color: var(--text-soft);
-  border-color: rgba(183, 183, 183, 0.28);
-  background-color: rgba(255, 255, 255, 0.04);
+  border-color: var(--line-strong);
+  background-color: var(--surface-soft);
 }
 
 .podcast-platform-link__icon {
@@ -230,7 +228,7 @@
 .podcast-platform-link--kkbox:hover,
 .podcast-platform-link--kkbox:focus-visible {
   border-color: currentColor;
-  background-color: rgba(255, 255, 255, 0.1);
+  background-color: var(--hover-fill-strong);
 }
 
 @media (max-width: 680px) {
@@ -267,7 +265,7 @@
 .podcast-audio {
   width: 100%;
   min-height: 44px;
-  color-scheme: dark;
+  color-scheme: var(--color-scheme);
 }
 
 .podcast-copy {

@@ -1,4 +1,50 @@
 (() => {
+  const THEME_STORAGE_KEY = "theme-preference";
+  const THEME_OPTIONS = new Set(["system", "light", "dark"]);
+
+  const getStoredThemePreference = () => {
+    try {
+      const stored = localStorage.getItem(THEME_STORAGE_KEY);
+      return THEME_OPTIONS.has(stored) ? stored : "system";
+    } catch (error) {
+      return "system";
+    }
+  };
+
+  const applyThemePreference = (preference) => {
+    if (preference === "light" || preference === "dark") {
+      document.documentElement.dataset.theme = preference;
+      return;
+    }
+
+    document.documentElement.removeAttribute("data-theme");
+  };
+
+  const syncThemeButtons = (preference) => {
+    document.querySelectorAll("[data-theme-option]").forEach((button) => {
+      const isActive = button.dataset.themeOption === preference;
+      button.classList.toggle("is-active", isActive);
+      button.setAttribute("aria-pressed", String(isActive));
+    });
+  };
+
+  const setThemePreference = (preference) => {
+    const nextPreference = THEME_OPTIONS.has(preference) ? preference : "system";
+
+    applyThemePreference(nextPreference);
+    syncThemeButtons(nextPreference);
+
+    try {
+      localStorage.setItem(THEME_STORAGE_KEY, nextPreference);
+    } catch (error) {
+      // Ignore storage failures and keep the session-level theme applied.
+    }
+  };
+
+  const initialThemePreference = getStoredThemePreference();
+  applyThemePreference(initialThemePreference);
+  syncThemeButtons(initialThemePreference);
+
   document.body.classList.add("page-enter");
   requestAnimationFrame(() => {
     document.body.classList.add("page-ready");
@@ -77,4 +123,20 @@
   if (yearNode) {
     yearNode.textContent = String(new Date().getFullYear());
   }
+
+  document.querySelectorAll("[data-theme-option]").forEach((button) => {
+    button.addEventListener("click", () => {
+      setThemePreference(button.dataset.themeOption || "system");
+    });
+  });
+
+  window.addEventListener("storage", (event) => {
+    if (event.key !== THEME_STORAGE_KEY) {
+      return;
+    }
+
+    const nextPreference = THEME_OPTIONS.has(event.newValue) ? event.newValue : "system";
+    applyThemePreference(nextPreference);
+    syncThemeButtons(nextPreference);
+  });
 })();

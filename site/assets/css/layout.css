@@ -9,14 +9,15 @@
   position: sticky;
   top: 0;
   backdrop-filter: blur(10px);
-  background-color: rgba(8, 8, 8, 0.88);
+  background-color: var(--header-background);
   z-index: 8;
 }
 
 .header-row {
   display: flex;
+  flex-wrap: wrap;
   justify-content: space-between;
-  align-items: baseline;
+  align-items: flex-start;
   gap: var(--space-3);
   padding-bottom: var(--space-3);
 }
@@ -43,6 +44,16 @@
   display: flex;
   gap: var(--space-2);
   flex-wrap: wrap;
+  justify-content: flex-end;
+}
+
+.header-actions {
+  flex: 1 1 24rem;
+  min-width: 0;
+  margin-left: auto;
+  display: grid;
+  gap: var(--space-2);
+  justify-items: end;
 }
 
 main {
@@ -117,7 +128,7 @@ body[data-page="projects"] .hero {
   border: 1px solid var(--line);
   border-radius: 24px;
   overflow: hidden;
-  background: radial-gradient(circle at 50% 50%, rgba(255, 255, 255, 0.06), rgba(8, 8, 8, 0.95) 58%);
+  background: var(--landing-background);
 }
 
 .landing-canvas {
@@ -221,6 +232,21 @@ body[data-page="home"] .footer {
   .footer {
     flex-direction: column;
     align-items: flex-start;
+  }
+
+  .header-actions {
+    flex: none;
+    width: 100%;
+    margin-left: 0;
+    justify-items: flex-start;
+  }
+
+  .site-nav {
+    width: 100%;
+  }
+
+  .site-nav ul {
+    justify-content: flex-start;
   }
 
   .grid-2 {
