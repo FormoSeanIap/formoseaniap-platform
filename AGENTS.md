@@ -1,5 +1,6 @@
 # Repository Instructions
 
+- Treat `/home/ubuntu/non_work/formoseaniap-platform` as the default permission boundary for this repo. Do not read, write, search, or run commands outside this repository unless the user explicitly asks for it.
 - After any code change, review the root `README.md`.
 - Update `README.md` if the change affects setup, usage, commands, configuration, behavior, dependencies, or project structure.
 - If no `README.md` update is needed, say that explicitly in the final response.
