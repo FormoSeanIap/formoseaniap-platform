@@ -129,6 +129,7 @@ Build-time flow:
 
 - `./.codex/config.toml` sets this repository to `workspace-write` with `approval_policy = "never"`.
 - In a trusted project, that means Codex can read, edit, and run routine local commands inside this repo without approval prompts.
+- If Codex is launched in a broader machine-level mode such as `danger-full-access`, that already-active session is not retroactively narrowed by `./.codex/config.toml`; the repo file only sets defaults for sessions that honor repo-local config at startup.
 - This repo-local file is ignored unless the project is trusted. If prompts persist, mark this repo as trusted in Codex or add a user-level entry such as `[projects."/home/ubuntu/non_work/formoseaniap-platform"] trust_level = "trusted"` in `~/.codex/config.toml`.
 - This configuration does not grant network access and does not expand access outside the workspace. If you want broader machine-level access, that must be enabled from your user-level Codex config or launch flags instead of this repo file.
 
