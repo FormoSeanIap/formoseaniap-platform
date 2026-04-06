@@ -49,6 +49,7 @@ Implemented:
   - RSS feeds (EN + ZH)
   - JSON-driven frontend pages (`site/articles.html`, `site/article.html`)
   - JSON-driven Projects page (`site/projects.html`)
+  - Project case-study cards support featured entries, status badges, highlight lists, and optional private-repo notes via `site/data/projects.json`
   - GitHub Actions scaffolding for integration-branch PR validation, preview artifacts, optional preview deploys, production site deploys from `main`, and future Terraform plan/apply workflows under `infra/`
 
 ## Architecture
@@ -108,7 +109,7 @@ Build-time flow:
     - js/podcasts.js         runtime RSS loading + podcast rendering
   - data/                    generated article JSON + podcast runtime config
     - articles.search.json   lazy-loaded article search index
-    - projects.json          project listing data
+    - projects.json          project case-study data
     - podcasts.shows.json    configured podcast feeds + platform links
   - articles.html            list/filter page
   - article.html             detail page
