@@ -52,16 +52,12 @@ jobs:
         with:
           terraform_wrapper: false
 
-      - name: Note Terraform plan status when no Terraform changes were pushed
-        if: ${{ needs.terraform_validate.outputs.has_tf_changes != 'true' }}
-        run: echo "No Terraform changes detected on this main push." >> "$GITHUB_STEP_SUMMARY"
-
       - name: Note Terraform plan status when AWS is not configured
-        if: ${{ needs.terraform_validate.outputs.has_tf_changes == 'true' && needs.terraform_validate.outputs.has_tf_root == 'true' && (vars.AWS_REGION == '' || vars.AWS_TERRAFORM_PLAN_ROLE_ARN == '') }}
-        run: echo "Set AWS_REGION and AWS_TERRAFORM_PLAN_ROLE_ARN repo variables to enable Terraform plan artifacts on main pushes." >> "$GITHUB_STEP_SUMMARY"
+        if: ${{ needs.terraform_validate.outputs.has_tf_root == 'true' && (vars.AWS_REGION == '' || vars.AWS_TERRAFORM_PLAN_ROLE_ARN == '') }}
+        run: echo "Set AWS_REGION and AWS_TERRAFORM_PLAN_ROLE_ARN repo variables to enable pre-promotion Terraform plan artifacts on main pushes." >> "$GITHUB_STEP_SUMMARY"
 
       - name: Configure AWS credentials from GitHub OIDC
-        if: ${{ needs.terraform_validate.outputs.has_tf_changes == 'true' && needs.terraform_validate.outputs.has_tf_root == 'true' && vars.AWS_REGION != '' && vars.AWS_TERRAFORM_PLAN_ROLE_ARN != '' }}
+        if: ${{ needs.terraform_validate.outputs.has_tf_root == 'true' && vars.AWS_REGION != '' && vars.AWS_TERRAFORM_PLAN_ROLE_ARN != '' }}
         uses: aws-actions/configure-aws-credentials@v6
         with:
           aws-region: ${{ vars.AWS_REGION }}
@@ -69,19 +65,19 @@ jobs:
           role-session-name: gha-terraform-plan-main-${{ github.run_id }}
 
       - name: Terraform init
-        if: ${{ needs.terraform_validate.outputs.has_tf_changes == 'true' && needs.terraform_validate.outputs.has_tf_root == 'true' && vars.AWS_REGION != '' && vars.AWS_TERRAFORM_PLAN_ROLE_ARN != '' }}
+        if: ${{ needs.terraform_validate.outputs.has_tf_root == 'true' && vars.AWS_REGION != '' && vars.AWS_TERRAFORM_PLAN_ROLE_ARN != '' }}
         run: terraform init -input=false
 
       - name: Terraform plan
-        if: ${{ needs.terraform_validate.outputs.has_tf_changes == 'true' && needs.terraform_validate.outputs.has_tf_root == 'true' && vars.AWS_REGION != '' && vars.AWS_TERRAFORM_PLAN_ROLE_ARN != '' }}
+        if: ${{ needs.terraform_validate.outputs.has_tf_root == 'true' && vars.AWS_REGION != '' && vars.AWS_TERRAFORM_PLAN_ROLE_ARN != '' }}
         run: terraform plan -input=false -no-color -out=tfplan
 
       - name: Render textual plan
-        if: ${{ needs.terraform_validate.outputs.has_tf_changes == 'true' && needs.terraform_validate.outputs.has_tf_root == 'true' && vars.AWS_REGION != '' && vars.AWS_TERRAFORM_PLAN_ROLE_ARN != '' }}
+        if: ${{ needs.terraform_validate.outputs.has_tf_root == 'true' && vars.AWS_REGION != '' && vars.AWS_TERRAFORM_PLAN_ROLE_ARN != '' }}
         run: terraform show -no-color tfplan > tfplan.txt
 
       - name: Upload plan artifacts
-        if: ${{ needs.terraform_validate.outputs.has_tf_changes == 'true' && needs.terraform_validate.outputs.has_tf_root == 'true' && vars.AWS_REGION != '' && vars.AWS_TERRAFORM_PLAN_ROLE_ARN != '' }}
+        if: ${{ needs.terraform_validate.outputs.has_tf_root == 'true' && vars.AWS_REGION != '' && vars.AWS_TERRAFORM_PLAN_ROLE_ARN != '' }}
         uses: actions/upload-artifact@v6
         with:
           name: terraform-plan-main-${{ github.run_id }}
@@ -137,12 +133,10 @@ jobs:
         run: terraform init -input=false
 
       - name: Terraform plan
-        if: ${{ needs.terraform_validate.outputs.has_tf_changes == 'true' }}
         working-directory: infra
         run: terraform plan -input=false -no-color -out=tfplan
 
       - name: Terraform apply
-        if: ${{ needs.terraform_validate.outputs.has_tf_changes == 'true' }}
         working-directory: infra
         run: terraform apply -input=false -auto-approve tfplan
 
@@ -152,8 +146,16 @@ jobs:
         run: |
           set -euo pipefail
 
-          site_bucket_name="$(terraform output -raw site_bucket_name)"
-          cloudfront_distribution_id="$(terraform output -raw cloudfront_distribution_id)"
+          terraform output -json > tf_outputs.json
+
+          site_bucket_name="$(jq -r '.site_bucket_name.value // empty' tf_outputs.json)"
+          cloudfront_distribution_id="$(jq -r '.cloudfront_distribution_id.value // empty' tf_outputs.json)"
+
+          if [ -z "${site_bucket_name}" ] || [ -z "${cloudfront_distribution_id}" ]; then
+            echo "Terraform state is missing required outputs: site_bucket_name and cloudfront_distribution_id." >&2
+            echo "Confirm that the production state in infra/backend.tf is correct and that the main pipeline can apply the Terraform stack successfully." >&2
+            exit 1
+          fi
 
           echo "site_bucket_name=${site_bucket_name}" >> "$GITHUB_OUTPUT"
           echo "cloudfront_distribution_id=${cloudfront_distribution_id}" >> "$GITHUB_OUTPUT"

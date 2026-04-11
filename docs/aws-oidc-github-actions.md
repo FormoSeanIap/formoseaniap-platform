@@ -13,7 +13,7 @@ Use it to validate that GitHub Actions can assume an AWS IAM role through OIDC w
 ## Recommended Role Split
 
 - `formoseaniap-platform-gha-deploy-prod`: production site deploy role scoped to the `prod` GitHub environment
-- `formoseaniap-platform-gha-terraform-plan`: read-only Terraform plan role scoped to PR plans and optional pre-promotion plans on `main`
+- `formoseaniap-platform-gha-terraform-plan`: read-only Terraform plan role scoped to PR plans and pre-promotion plans on `main`
 - `formoseaniap-platform-gha-terraform-apply-prod`: production Terraform apply role scoped to the `prod` GitHub environment
 - `formoseaniap-platform-gha-preview`: optional future preview deploy role scoped to the `preview` GitHub environment
 
@@ -36,7 +36,7 @@ Keep the local AWS MCP role separate from GitHub Actions roles.
 - `docs/examples/aws-oidc-trust-policy-pull-request.json`
   Use this for jobs that only need PR-triggered OIDC without a GitHub environment.
 - `docs/examples/aws-oidc-trust-policy-plan-and-output.json`
-  Use this for `formoseaniap-platform-gha-terraform-plan`, which runs Terraform plan from PR-triggered jobs and optional pre-promotion plan jobs on `main`.
+  Use this for `formoseaniap-platform-gha-terraform-plan`, which runs Terraform plan from PR-triggered jobs and pre-promotion plan jobs on `main`.
 
 The trust policy examples are prefilled for:
 
@@ -74,7 +74,7 @@ That is enough to verify the trust policy and the GitHub-side `id-token: write` 
 - `pr-validate.yml`
   PR validation plus optional preview deploy and optional Terraform plan. The workflow runs shared Terraform validation first, and preview waits for the Terraform PR checks to complete. Because the preview deploy job uses the `preview` environment, the OIDC subject should be environment-scoped. The Terraform plan job does not use a GitHub environment, so its OIDC subject remains `pull_request`.
 - `push-main.yml`
-  Production promotion from `main`. It re-runs the shared site validation path, reuses the shared Terraform validation path for main-branch changes, can publish a Terraform plan artifact through the read-only plan role, then waits on the protected `prod` environment before using the apply role and deploy role to promote infrastructure and site changes together.
+  Production promotion from `main`. It re-runs the shared site validation path, reuses the shared Terraform validation path for changed Terraform files, can publish a pre-promotion Terraform plan artifact through the read-only plan role, then waits on the protected `prod` environment before always running Terraform plan/apply with the production apply role and deploying the site with the production deploy role.
 ## GitHub Variables Expected By The Workflows
 
 - `AWS_REGION`: `ap-northeast-1`
@@ -98,5 +98,5 @@ When the new AWS account is ready:
 4. Run the smoke-test workflow with `github_environment=prod`, `aws_region=ap-northeast-1`, and one prod environment-scoped role ARN.
 5. Set `AWS_REGION`, `AWS_TERRAFORM_PLAN_ROLE_ARN`, `AWS_TERRAFORM_APPLY_ROLE_ARN`, and `AWS_PROD_ROLE_ARN`.
 6. Merge or push the release to `main`.
-7. Review the optional Terraform plan artifact when infra changed.
-8. Approve the `prod` environment in the `Push Main` workflow from `push-main.yml` to apply infrastructure changes, if any, and deploy the site.
+7. Review the optional Terraform plan artifact from `Push Main` when it is available.
+8. Approve the `prod` environment in the `Push Main` workflow from `push-main.yml` so it can always run Terraform plan/apply against production and deploy the site.

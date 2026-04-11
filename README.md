@@ -87,7 +87,7 @@ Build-time flow:
     - _terraform-validate-shared.yml reusable Terraform change detection + validation
     - push-others.yml           `Push Others`: push validation for work branches and `develop`
     - pr-validate.yml           `PR Validate`: PR validation, preview, and optional Terraform plan
-    - push-main.yml             `Push Main`: main-branch validation + gated production promotion
+    - push-main.yml             `Push Main`: main-branch validation + gated full Terraform plan/apply + production deploy
 - .codex/
   - config.toml                 repo-local Codex sandbox/approval defaults
   - skills/
@@ -166,8 +166,8 @@ Build-time flow:
 ## CI/CD Workflow
 
 - `./.github/workflows/push-others.yml` runs unit tests, rebuilds generated site artifacts, fails on generated-artifact drift, and adds push-safe Terraform validation when Terraform-related files changed on `feature/*`, `fix/*`, `chore/*`, `docs/*`, `hotfix/*`, and `develop`.
-- `./.github/workflows/pr-validate.yml` runs unit tests, rebuilds generated site artifacts, fails if generated outputs are out of date, uploads a preview artifact, performs shared Terraform validation plus an optional OIDC-backed Terraform plan, and only proceeds to preview status/deploy after the Terraform PR checks are complete.
-- `./.github/workflows/push-main.yml` re-runs the same validation path on `main`, can publish a Terraform plan artifact for infra changes, and waits at the protected `prod` environment before applying Terraform changes, reading production outputs from remote state, and deploying the generated `site/` output.
+- `./.github/workflows/pr-validate.yml` runs unit tests, rebuilds generated site artifacts, fails if generated outputs are out of date, uploads a preview artifact, performs shared Terraform validation plus an optional OIDC-backed Terraform plan when infra files changed, and only proceeds to preview status/deploy after the Terraform PR checks are complete.
+- `./.github/workflows/push-main.yml` re-runs the same validation path on `main`, can publish a pre-promotion Terraform plan artifact when the read-only plan role is configured, and waits at the protected `prod` environment before always running Terraform plan/apply against the production state, reading production outputs from remote state, and deploying the generated `site/` output.
 
 ## Planning Workflow
 
@@ -452,12 +452,12 @@ Resume AWS rollout from these steps:
 
 1. Create the GitHub Actions OIDC identity provider in AWS if it does not already exist.
 2. Create the IAM roles and policies from `docs/aws-oidc-github-actions.md`.
-3. Use `docs/examples/aws-oidc-trust-policy-plan-and-output.json` for the Terraform plan role, because PRs and optional main-branch pre-promotion plans still use a read-only role.
+3. Use `docs/examples/aws-oidc-trust-policy-plan-and-output.json` for the Terraform plan role, because PRs and main-branch pre-promotion plans still use a read-only role.
 4. Set GitHub repository variables: `AWS_REGION`, `AWS_TERRAFORM_PLAN_ROLE_ARN`, `AWS_TERRAFORM_APPLY_ROLE_ARN`, and `AWS_PROD_ROLE_ARN`.
 5. Run `AWS OIDC Smoke` against a `prod` environment-scoped role.
 6. Merge or push the release to `main`.
-7. Review the optional Terraform plan artifact when infra changed, then approve the protected `prod` environment in `Push Main`.
-8. Let the gated `Push Main` workflow apply infrastructure changes, if any, and deploy the generated site; it reads `site_bucket_name` and `cloudfront_distribution_id` from Terraform remote state, so `PROD_S3_BUCKET` and `PROD_CLOUDFRONT_DISTRIBUTION_ID` variables are not required.
+7. Review the optional Terraform plan artifact from `Push Main` when it is available, then approve the protected `prod` environment.
+8. Let the gated `Push Main` workflow always run Terraform plan/apply against the production stack and deploy the generated site; it reads `site_bucket_name` and `cloudfront_distribution_id` from Terraform remote state, so `PROD_S3_BUCKET` and `PROD_CLOUDFRONT_DISTRIBUTION_ID` variables are not required.
 9. Verify the CloudFront distribution serves the static site and that `podcasts.html` loads live episodes through same-origin `/podcasts/*.xml` feed paths.
 
 ## Style Direction
