@@ -20,7 +20,7 @@ jobs:
 
     steps:
       - name: Check out repository
-        uses: actions/checkout@v5
+        uses: actions/checkout@v6
 
       - name: Set up Python
         uses: actions/setup-python@v6
@@ -46,7 +46,7 @@ jobs:
           python3 scripts/audit_versions.py "${args[@]}"
 
       - name: Upload audit artifact
-        uses: actions/upload-artifact@v6
+        uses: actions/upload-artifact@v7
         with:
           name: version-audit-${{ github.run_id }}
           path: version-audit.json
