@@ -4,7 +4,7 @@ terraform {
   required_providers {
     aws = {
       source  = "hashicorp/aws"
-      version = "~> 5.0"
+      version = "~> 6.0"
     }
   }
 }
@@ -84,56 +84,6 @@ resource "aws_cloudfront_origin_access_control" "site" {
   signing_protocol                  = "sigv4"
 }
 
-resource "aws_cloudfront_cache_policy" "static_site" {
-  name        = "${local.name_prefix}-static-site-cache"
-  comment     = "Cache policy for static portfolio assets served from S3."
-  default_ttl = var.static_site_cache_default_ttl_seconds
-  max_ttl     = var.static_site_cache_max_ttl_seconds
-  min_ttl     = 0
-
-  parameters_in_cache_key_and_forwarded_to_origin {
-    enable_accept_encoding_brotli = true
-    enable_accept_encoding_gzip   = true
-
-    cookies_config {
-      cookie_behavior = "none"
-    }
-
-    headers_config {
-      header_behavior = "none"
-    }
-
-    query_strings_config {
-      query_string_behavior = "none"
-    }
-  }
-}
-
-resource "aws_cloudfront_cache_policy" "podcast_feeds" {
-  name        = "${local.name_prefix}-podcast-feeds-cache"
-  comment     = "Short-lived cache policy for same-origin SoundOn RSS feed reads."
-  default_ttl = var.podcast_feed_cache_default_ttl_seconds
-  max_ttl     = var.podcast_feed_cache_max_ttl_seconds
-  min_ttl     = 0
-
-  parameters_in_cache_key_and_forwarded_to_origin {
-    enable_accept_encoding_brotli = true
-    enable_accept_encoding_gzip   = true
-
-    cookies_config {
-      cookie_behavior = "none"
-    }
-
-    headers_config {
-      header_behavior = "none"
-    }
-
-    query_strings_config {
-      query_string_behavior = "none"
-    }
-  }
-}
-
 resource "aws_cloudfront_distribution" "site" {
   comment             = "${var.project_name} ${var.environment} static site"
   default_root_object = var.default_root_object
@@ -163,7 +113,7 @@ resource "aws_cloudfront_distribution" "site" {
 
   default_cache_behavior {
     allowed_methods        = ["GET", "HEAD"]
-    cache_policy_id        = aws_cloudfront_cache_policy.static_site.id
+    cache_policy_id        = var.static_site_cache_policy_id
     cached_methods         = ["GET", "HEAD"]
     compress               = true
     target_origin_id       = local.s3_origin_id
@@ -172,7 +122,7 @@ resource "aws_cloudfront_distribution" "site" {
 
   ordered_cache_behavior {
     allowed_methods        = ["GET", "HEAD"]
-    cache_policy_id        = aws_cloudfront_cache_policy.podcast_feeds.id
+    cache_policy_id        = var.podcast_feed_cache_policy_id
     cached_methods         = ["GET", "HEAD"]
     compress               = true
     path_pattern           = var.podcast_feed_path_pattern
