@@ -33,6 +33,11 @@ jobs:
       - name: Build generated site artifacts
         run: python3 scripts/build_articles.py
 
+      - name: Ensure generated outputs are committed
+        run: |
+          git diff --stat -- site/data site/assets/articles site/rss.xml site/zh/rss.xml
+          git diff --exit-code -- site/data site/assets/articles site/rss.xml site/zh/rss.xml
+
       - name: Upload production artifact
         uses: actions/upload-artifact@v4
         with:

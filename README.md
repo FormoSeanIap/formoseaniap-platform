@@ -59,7 +59,7 @@ Implemented:
   - JSON-driven frontend pages (`site/articles.html`, `site/article.html`)
   - JSON-driven Projects page (`site/projects.html`)
   - Project case-study cards support featured entries, status badges, highlight lists, and optional private-repo notes via `site/data/projects.json`
-  - GitHub Actions scaffolding for integration-branch PR validation, preview artifacts, optional preview deploys, production site deploys from `main`, and future Terraform plan/apply workflows under `infra/`
+  - GitHub Actions scaffolding for integration-branch PR validation, supplemental `develop` push validation, preview artifacts, production site deploys from `main`, and Terraform validate/plan/apply workflows under `infra/`
 
 ## Architecture
 
@@ -82,9 +82,11 @@ Build-time flow:
 - .github/
   - workflows/
     - aws-oidc-smoke.yml        manual GitHub OIDC -> AWS trust smoke test
+    - develop-push-validate.yml develop push tests + site build + generated-artifact drift check
     - pr-validate.yml           PR tests + site build + generated-artifact drift check
     - pr-preview.yml            PR artifact preview + optional hosted preview deploy
     - deploy-site-prod.yml      build and deploy the static site from `main`
+    - terraform-validate-develop.yml develop push Terraform fmt + validate checks
     - terraform-plan.yml        Terraform PR checks for `infra/`
     - terraform-apply-prod.yml  manual prod-gated Terraform apply
 - .codex/
@@ -163,9 +165,11 @@ Build-time flow:
 
 ## CI/CD Workflow
 
+- `./.github/workflows/develop-push-validate.yml` runs unit tests, rebuilds generated site artifacts, and fails on generated-artifact drift for direct pushes to `develop`.
 - `./.github/workflows/pr-validate.yml` runs unit tests, rebuilds generated site artifacts, and fails if generated outputs are out of date on pull requests to `develop` and `main`.
 - `./.github/workflows/pr-preview.yml` uploads a `site/` preview artifact for every pull request to `develop` and `main`, and can optionally sync that preview to S3 when preview variables are configured.
-- `./.github/workflows/deploy-site-prod.yml` rebuilds the static site, reads the production bucket and CloudFront distribution ID from Terraform remote state, and deploys only the generated `site/` output from `main` when production AWS variables are configured.
+- `./.github/workflows/deploy-site-prod.yml` rebuilds the static site, fails on generated-artifact drift, reads the production bucket and CloudFront distribution ID from Terraform remote state, and deploys only the generated `site/` output from `main` when production AWS variables are configured.
+- `./.github/workflows/terraform-validate-develop.yml` enforces `infra/` placement and runs push-safe Terraform `fmt` + `validate` checks on `develop` when Terraform-related files change.
 - `./.github/workflows/terraform-plan.yml` is reserved for Terraform changes under `infra/`, keeps Terraform files under that directory, and runs `fmt`, `validate`, plus an optional OIDC-backed plan on pull requests to `develop` and `main`.
 - `./.github/workflows/terraform-apply-prod.yml` is a manual production apply workflow gated by the `prod` GitHub environment.
 

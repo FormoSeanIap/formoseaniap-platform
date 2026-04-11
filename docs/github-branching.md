@@ -16,6 +16,7 @@ This repository uses a two-tier branch model.
 - Prefer squash merges for feature PRs into `develop` so integration history stays compact.
 - Prefer a normal merge commit for `develop` to `main` release PRs so release boundaries remain visible in history.
 - After merging a `hotfix/*` branch to `main`, immediately merge or cherry-pick the same fix back into `develop`.
+- Direct pushes are not the preferred merge path, but supplemental push-time validation exists on `develop` as a safety net for local merge-and-push cases.
 
 ## GitHub Settings To Apply
 
@@ -46,6 +47,8 @@ This repository uses a two-tier branch model.
 4. Open a release PR from `develop` to `main`.
 5. Merge that release PR to trigger production deployment from `main`.
 
+When a local merge is pushed directly to `develop`, the push-safe site validation and Terraform validation workflows still run, but that does not replace the preferred PR-based review path.
+
 ## Repo Variables For Workflow Activation
 
 Set these as GitHub repository variables when the AWS side is ready:
@@ -63,8 +66,10 @@ Production deploy reads `site_bucket_name` and `cloudfront_distribution_id` from
 
 ## Resulting Workflow Split
 
+- `Develop Push Validate`: tests, site build, and generated-artifact drift check on direct pushes to `develop`
 - `PR Validate`: tests, site build, and generated-artifact drift check on pull requests to `develop` and `main`
 - `PR Preview`: preview artifact on every pull request to `develop` and `main`, plus optional hosted preview deploy
-- `Deploy Site Prod`: build on `main` and deploy only the static `site/` output to production
+- `Deploy Site Prod`: build on `main`, fail on generated-artifact drift, and deploy only the static `site/` output to production
+- `Terraform Validate Develop`: enforce `infra/` placement and run Terraform `fmt` + `validate` checks on direct pushes to `develop`
 - `Terraform Plan`: enforce `infra/` placement and run Terraform checks on pull requests to `develop` and `main`
 - `Terraform Apply Prod`: manual, production-gated apply from `main`
