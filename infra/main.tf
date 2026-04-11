@@ -16,9 +16,10 @@ provider "aws" {
 data "aws_caller_identity" "current" {}
 
 locals {
-  name_prefix       = "${var.project_name}-${var.environment}"
-  s3_origin_id      = "${local.name_prefix}-site-s3"
-  soundon_origin_id = "${local.name_prefix}-soundon-rss"
+  name_prefix                  = "${var.project_name}-${var.environment}"
+  cloudfront_distribution_name = "${local.name_prefix}-site-cdn"
+  s3_origin_id                 = "${local.name_prefix}-site-s3"
+  soundon_origin_id            = "${local.name_prefix}-soundon-rss"
   site_bucket_name = (
     var.site_bucket_name != ""
     ? var.site_bucket_name
@@ -85,7 +86,7 @@ resource "aws_cloudfront_origin_access_control" "site" {
 }
 
 resource "aws_cloudfront_distribution" "site" {
-  comment             = "${var.project_name} ${var.environment} static site"
+  comment             = local.cloudfront_distribution_name
   default_root_object = var.default_root_object
   enabled             = true
   http_version        = "http2and3"
@@ -141,7 +142,15 @@ resource "aws_cloudfront_distribution" "site" {
     cloudfront_default_certificate = true
   }
 
-  tags = local.tags
+  # Flat-rate CloudFront plans can auto-attach a required web ACL in the console.
+  # Keep Terraform from trying to remove that console-managed association.
+  lifecycle {
+    ignore_changes = [web_acl_id]
+  }
+
+  tags = merge(local.tags, {
+    Name = local.cloudfront_distribution_name
+  })
 }
 
 data "aws_iam_policy_document" "site_bucket" {

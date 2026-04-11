@@ -463,8 +463,10 @@ Important:
 - The Terraform root currently targets the `hashicorp/aws` provider `~> 6.0`.
 - The `infra/` root uses S3 remote state in `formoseaniap-platform-tfstate-760259504838-ap-northeast-1-an` with native S3 lock files.
 - The production stack creates the private site bucket and CloudFront distribution; the production deploy workflow reads output `site_bucket_name` and output `cloudfront_distribution_id` from Terraform remote state at run time.
-- The default CloudFront pay-as-you-go configuration uses `PriceClass_100` to keep CDN cost at the lowest edge-location tier until Terraform supports CloudFront flat-rate plan management.
+- Terraform leaves CloudFront `price_class` unset while the distribution is on a console-managed flat-rate plan, because Free/Pro plans do not allow the price class feature on distribution updates.
 - The CloudFront distribution uses AWS-managed cache policies only: `CachingOptimized` for the static site and `CachingDisabled` for `/podcasts/*`, avoiding the Business-only custom caching rules that block Free/Pro flat-rate plan changes in the AWS console.
+- If a CloudFront flat-rate plan auto-attaches a required WAF web ACL, Terraform ignores `web_acl_id` drift on the distribution and leaves that console-managed association in place.
+- If you later move the distribution back to pay-as-you-go, set `cloudfront_price_class` explicitly to a value such as `PriceClass_100`.
 - If you manually enable a CloudFront flat-rate plan in the AWS console, Terraform cannot currently unsubscribe or destroy that distribution until the plan is canceled manually and the current billing cycle ends.
 - If infrastructure later splits into multiple stacks or modules, update the Terraform workflows to target each stack explicitly.
 
