@@ -46,7 +46,7 @@ This repository uses a two-tier branch model.
 3. Let PR validation, preview, and optional Terraform plan run on `develop` PRs.
 4. Open a release PR from `develop` to `main`.
 5. Merge that release PR to trigger the `main` production workflow.
-6. Approve the protected `prod` environment in the same workflow run to apply Terraform changes, if any, and deploy the generated site.
+6. Approve the protected `prod` environment in the same workflow run so `Push Main` can always run Terraform plan/apply against production and then deploy the generated site.
 
 When a local merge is pushed directly to a work branch or `develop`, `Push Others` still runs, and Terraform validation runs automatically when Terraform-related files changed. A direct push to `main` still re-runs validation inside `Push Main` before the protected `prod` gate. That does not replace the preferred PR-based review path.
 
@@ -68,5 +68,5 @@ Production deploy reads `site_bucket_name` and `cloudfront_distribution_id` from
 ## Resulting Workflow Split
 
 - `push-others.yml` (`Push Others`): tests, site build, generated-artifact drift checks, and push-safe Terraform validation on `feature/*`, `fix/*`, `chore/*`, `docs/*`, `hotfix/*`, and `develop`
-- `pr-validate.yml` (`PR Validate`): tests, site build, generated-artifact drift check, shared Terraform validation, optional Terraform plan, preview artifact upload, and optional hosted preview deploy on pull requests to `develop` and `main`
-- `push-main.yml` (`Push Main`): run the same validation path on `main`, optionally publish a Terraform plan artifact for infra changes, and wait at the protected `prod` environment before Terraform apply plus site deploy
+- `pr-validate.yml` (`PR Validate`): tests, site build, generated-artifact drift check, shared Terraform validation, optional Terraform plan when infra files changed, preview artifact upload, and optional hosted preview deploy on pull requests to `develop` and `main`
+- `push-main.yml` (`Push Main`): run the same validation path on `main`, optionally publish a pre-promotion Terraform plan artifact when the read-only plan role is configured, and wait at the protected `prod` environment before always running Terraform plan/apply plus site deploy
