@@ -39,6 +39,7 @@ Implemented:
   - S3 remote state backend in `ap-northeast-1`
   - Private S3 site origin with public access blocked
   - CloudFront Origin Access Control for S3 reads
+  - AWS-managed CloudFront cache policies only, so the distribution can later be moved to a Free/Pro flat-rate plan from the AWS console
   - CloudFront `/podcasts/*` behavior routed to the SoundOn RSS origin for same-origin browser fetches
 - Python-based article build pipeline:
   - Markdown source in `content/articles/**`
@@ -80,6 +81,7 @@ Build-time flow:
 ```text
 /
 - .github/
+  - dependabot.yml             Dependabot config for GitHub Actions + Terraform updates
   - actions/
     - site-validate/action.yml   shared site validation steps for PR/push/main workflows
   - workflows/
@@ -88,6 +90,7 @@ Build-time flow:
     - push-others.yml           `Push Others`: push validation for work branches and `develop`
     - pr-validate.yml           `PR Validate`: PR validation, preview, and optional Terraform plan
     - push-main.yml             `Push Main`: main-branch validation + gated full Terraform plan/apply + production deploy
+    - version-audit.yml         weekly + manual runtime/tool version audit
 - .codex/
   - config.toml                 repo-local Codex sandbox/approval defaults
   - skills/
@@ -113,6 +116,7 @@ Build-time flow:
   - variables.tf               production infrastructure variables
   - outputs.tf                 site bucket and CloudFront outputs
 - scripts/
+  - audit_versions.py         offline + optional network version audit for repo tooling
   - build_articles.py
   - dedupe_bilingual_images.py
   - podcast_proxy.py          local + Lambda-compatible podcast RSS proxy
@@ -128,6 +132,8 @@ Build-time flow:
   - article.html             detail page
   - podcasts.html            runtime-loaded podcast landing page
   - projects.html            project list page
+- tooling/
+  - version-policy.yml       repo version policy for Python, Terraform, and tracked GitHub Actions
   - rss.xml                  generated EN feed
   - zh/rss.xml               generated ZH feed
 - README.md
@@ -168,6 +174,8 @@ Build-time flow:
 - `./.github/workflows/push-others.yml` runs unit tests, rebuilds generated site artifacts, fails on generated-artifact drift, and adds push-safe Terraform validation when Terraform-related files changed on `feature/*`, `fix/*`, `chore/*`, `docs/*`, `hotfix/*`, and `develop`.
 - `./.github/workflows/pr-validate.yml` runs unit tests, rebuilds generated site artifacts, fails if generated outputs are out of date, uploads a preview artifact, performs shared Terraform validation plus an optional OIDC-backed Terraform plan when infra files changed, and only proceeds to preview status/deploy after the Terraform PR checks are complete.
 - `./.github/workflows/push-main.yml` re-runs the same validation path on `main`, can publish a pre-promotion Terraform plan artifact when the read-only plan role is configured, and waits at the protected `prod` environment before always running Terraform plan/apply against the production state, reading production outputs from remote state, and deploying the generated `site/` output.
+- `./.github/workflows/version-audit.yml` runs a weekly and manually triggered version audit for Python, Terraform, and tracked GitHub Actions, writing a summary plus a JSON artifact.
+- `./.github/dependabot.yml` opens weekly update PRs for Terraform and GitHub Actions dependency drift.
 
 ## Planning Workflow
 
@@ -264,7 +272,7 @@ Site feed metadata is defined in:
 ## Build Commands
 
 Prerequisite:
-- Python 3.10+ (stdlib only, no pip dependencies required)
+- Python 3.14+ (stdlib only, no pip dependencies required)
 
 Run unit tests:
 ```bash
@@ -291,6 +299,16 @@ Deduplicate identical EN/ZH images into `Shared/` folders:
 ```bash
 python3 scripts/dedupe_bilingual_images.py
 python3 scripts/dedupe_bilingual_images.py --write --verify
+```
+
+Run offline version audit:
+```bash
+python3 scripts/audit_versions.py
+```
+
+Run version audit with upstream latest-version checks:
+```bash
+python3 scripts/audit_versions.py --network
 ```
 
 Generated outputs:
@@ -442,8 +460,12 @@ Important:
 
 - Keep Terraform for this repository under `infra/`.
 - Start with a single root stack under `infra/`.
+- The Terraform root currently targets the `hashicorp/aws` provider `~> 6.0`.
 - The `infra/` root uses S3 remote state in `formoseaniap-platform-tfstate-760259504838-ap-northeast-1-an` with native S3 lock files.
 - The production stack creates the private site bucket and CloudFront distribution; the production deploy workflow reads output `site_bucket_name` and output `cloudfront_distribution_id` from Terraform remote state at run time.
+- The default CloudFront pay-as-you-go configuration uses `PriceClass_100` to keep CDN cost at the lowest edge-location tier until Terraform supports CloudFront flat-rate plan management.
+- The CloudFront distribution uses AWS-managed cache policies only: `CachingOptimized` for the static site and `CachingDisabled` for `/podcasts/*`, avoiding the Business-only custom caching rules that block Free/Pro flat-rate plan changes in the AWS console.
+- If you manually enable a CloudFront flat-rate plan in the AWS console, Terraform cannot currently unsubscribe or destroy that distribution until the plan is canceled manually and the current billing cycle ends.
 - If infrastructure later splits into multiple stacks or modules, update the Terraform workflows to target each stack explicitly.
 
 ## AWS Deployment Next Steps
