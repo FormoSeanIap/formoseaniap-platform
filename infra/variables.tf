@@ -5,8 +5,8 @@ variable "aws_region" {
 }
 
 variable "cloudfront_price_class" {
-  default     = "PriceClass_200"
-  description = "CloudFront edge location price class."
+  default     = "PriceClass_100"
+  description = "CloudFront edge location price class. Defaults to the lowest-cost tier while flat-rate plans are not Terraform-managed."
   type        = string
 }
 
@@ -14,6 +14,12 @@ variable "cloudfront_wait_for_deployment" {
   default     = true
   description = "Whether Terraform should wait for CloudFront distribution changes to finish deploying."
   type        = bool
+}
+
+variable "static_site_cache_policy_id" {
+  default     = "658327ea-f89d-4fab-a63d-7e88639e58f6"
+  description = "CloudFront cache policy ID for static site objects. Defaults to AWS-managed CachingOptimized so the distribution avoids Business-only custom caching rules."
+  type        = string
 }
 
 variable "default_root_object" {
@@ -28,16 +34,10 @@ variable "environment" {
   type        = string
 }
 
-variable "podcast_feed_cache_default_ttl_seconds" {
-  default     = 300
-  description = "Default CloudFront TTL for proxied podcast RSS feed responses."
-  type        = number
-}
-
-variable "podcast_feed_cache_max_ttl_seconds" {
-  default     = 900
-  description = "Maximum CloudFront TTL for proxied podcast RSS feed responses."
-  type        = number
+variable "podcast_feed_cache_policy_id" {
+  default     = "4135ea2d-6df8-44a3-9df3-4b5a84be39ad"
+  description = "CloudFront cache policy ID for proxied podcast RSS feed responses. Defaults to AWS-managed CachingDisabled to keep feed reads fresh without custom caching rules."
+  type        = string
 }
 
 variable "podcast_feed_origin_domain" {
@@ -74,16 +74,4 @@ variable "site_bucket_versioning_enabled" {
   default     = true
   description = "Whether to enable versioning on the private S3 site bucket."
   type        = bool
-}
-
-variable "static_site_cache_default_ttl_seconds" {
-  default     = 3600
-  description = "Default CloudFront TTL for static site objects."
-  type        = number
-}
-
-variable "static_site_cache_max_ttl_seconds" {
-  default     = 86400
-  description = "Maximum CloudFront TTL for static site objects."
-  type        = number
 }

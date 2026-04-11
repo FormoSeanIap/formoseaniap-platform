@@ -1,0 +1,14 @@
+python:
+  ci_version: "3.14"
+  docs_minimum: "3.14+"
+
+terraform:
+  required_version: ">= 1.10.0"
+  aws_provider_constraint: "~> 6.0"
+  warn_if_workflow_cli_floats: true
+
+github_actions:
+  tracked_repositories: ["actions/checkout", "actions/setup-python", "actions/upload-artifact", "actions/download-artifact", "aws-actions/configure-aws-credentials", "hashicorp/setup-terraform"]
+
+node:
+  enabled: false
