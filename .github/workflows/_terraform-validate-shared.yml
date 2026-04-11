@@ -1,0 +1,99 @@
+name: Shared Terraform Validate
+
+on:
+  workflow_call:
+    inputs:
+      compare_base_sha:
+        required: true
+        type: string
+      compare_head_sha:
+        required: true
+        type: string
+    outputs:
+      has_tf_changes:
+        description: Whether Terraform-related files changed in the compared range
+        value: ${{ jobs.detect_terraform_changes.outputs.has_tf_changes }}
+      has_tf_root:
+        description: Whether a Terraform root exists under infra/
+        value: ${{ jobs.detect_terraform_changes.outputs.has_tf_root }}
+
+permissions:
+  contents: read
+
+jobs:
+  detect_terraform_changes:
+    runs-on: ubuntu-latest
+    outputs:
+      has_tf_changes: ${{ steps.detect.outputs.has_tf_changes }}
+      has_tf_root: ${{ steps.detect.outputs.has_tf_root }}
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v5
+        with:
+          fetch-depth: 0
+
+      - name: Detect Terraform changes under infra/
+        id: detect
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          zero_sha="0000000000000000000000000000000000000000"
+          before_sha="${{ inputs.compare_base_sha }}"
+          after_sha="${{ inputs.compare_head_sha }}"
+          tf_pattern='(^|/).*\.tf$|(^|/).*\.tfvars$|(^|/)\.terraform\.lock\.hcl$'
+
+          if find infra -type f -name '*.tf' -print -quit | grep -q .; then
+            echo "has_tf_root=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "has_tf_root=false" >> "$GITHUB_OUTPUT"
+            echo "No Terraform root files exist under infra/ yet." >> "$GITHUB_STEP_SUMMARY"
+          fi
+
+          if [ -z "${before_sha}" ] || [ "${before_sha}" = "${zero_sha}" ]; then
+            changed_files="$(git ls-tree -r --name-only "${after_sha}" | grep -E "${tf_pattern}" || true)"
+          else
+            changed_files="$(git diff --name-only "${before_sha}" "${after_sha}" | grep -E "${tf_pattern}" || true)"
+          fi
+
+          if [ -z "${changed_files}" ]; then
+            echo "has_tf_changes=false" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+
+          outside_infra="$(printf '%s\n' "${changed_files}" | grep -Ev '^infra/' || true)"
+          if [ -n "${outside_infra}" ]; then
+            echo "Terraform files must live under infra/." >&2
+            printf '%s\n' "${outside_infra}" >&2
+            exit 1
+          fi
+
+          echo "has_tf_changes=true" >> "$GITHUB_OUTPUT"
+
+  terraform_validate:
+    needs: detect_terraform_changes
+    if: ${{ needs.detect_terraform_changes.outputs.has_tf_changes == 'true' && needs.detect_terraform_changes.outputs.has_tf_root == 'true' }}
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        shell: bash
+        working-directory: infra
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v5
+
+      - name: Set up Terraform
+        uses: hashicorp/setup-terraform@v4
+        with:
+          terraform_wrapper: false
+
+      - name: Terraform fmt
+        run: terraform fmt -check -recursive
+
+      - name: Terraform init for validate
+        run: terraform init -backend=false -input=false
+
+      - name: Terraform validate
+        run: terraform validate -no-color
