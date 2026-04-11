@@ -20,10 +20,10 @@ jobs:
 
     steps:
       - name: Check out repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
 
       - name: Set up Python
-        uses: actions/setup-python@v5
+        uses: actions/setup-python@v6
         with:
           python-version: "3.11"
 
@@ -39,7 +39,7 @@ jobs:
           git diff --exit-code -- site/data site/assets/articles site/rss.xml site/zh/rss.xml
 
       - name: Upload production artifact
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v6
         with:
           name: site-prod-${{ github.run_id }}
           path: site/
@@ -68,15 +68,15 @@ jobs:
 
     steps:
       - name: Check out repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
 
       - name: Set up Terraform
-        uses: hashicorp/setup-terraform@v3
+        uses: hashicorp/setup-terraform@v4
         with:
           terraform_wrapper: false
 
       - name: Configure AWS credentials from GitHub OIDC
-        uses: aws-actions/configure-aws-credentials@v5.1.1
+        uses: aws-actions/configure-aws-credentials@v6
         with:
           aws-region: ${{ vars.AWS_REGION }}
           role-to-assume: ${{ vars.AWS_TERRAFORM_PLAN_ROLE_ARN }}
@@ -108,13 +108,13 @@ jobs:
 
     steps:
       - name: Download production artifact
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v7
         with:
           name: site-prod-${{ github.run_id }}
           path: prod-site
 
       - name: Configure AWS credentials from GitHub OIDC
-        uses: aws-actions/configure-aws-credentials@v5.1.1
+        uses: aws-actions/configure-aws-credentials@v6
         with:
           aws-region: ${{ vars.AWS_REGION }}
           role-to-assume: ${{ vars.AWS_PROD_ROLE_ARN }}

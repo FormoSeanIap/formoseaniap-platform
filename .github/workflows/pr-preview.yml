@@ -20,10 +20,10 @@ jobs:
 
     steps:
       - name: Check out repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
 
       - name: Set up Python
-        uses: actions/setup-python@v5
+        uses: actions/setup-python@v6
         with:
           python-version: "3.11"
 
@@ -31,7 +31,7 @@ jobs:
         run: python3 scripts/build_articles.py
 
       - name: Upload preview artifact
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v6
         with:
           name: site-preview-${{ github.event.pull_request.number }}
           path: site/
@@ -56,13 +56,13 @@ jobs:
 
     steps:
       - name: Download preview artifact
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v7
         with:
           name: site-preview-${{ github.event.pull_request.number }}
           path: preview-site
 
       - name: Configure AWS credentials from GitHub OIDC
-        uses: aws-actions/configure-aws-credentials@v5.1.1
+        uses: aws-actions/configure-aws-credentials@v6
         with:
           aws-region: ${{ vars.AWS_REGION }}
           role-to-assume: ${{ vars.AWS_PREVIEW_ROLE_ARN }}
