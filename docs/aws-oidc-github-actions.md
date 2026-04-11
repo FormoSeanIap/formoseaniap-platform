@@ -12,37 +12,50 @@ Use it to validate that GitHub Actions can assume an AWS IAM role through OIDC w
 
 ## Recommended Role Split
 
-- `gha-preview`: optional preview deploy role scoped to the `preview` GitHub environment
-- `gha-deploy-prod`: production site deploy role scoped to the `prod` GitHub environment
-- `gha-terraform-plan`: read-only Terraform plan role scoped to `pull_request` jobs
-- `gha-terraform-apply-prod`: production Terraform apply role scoped to the `prod` GitHub environment
+- `formoseaniap-platform-gha-deploy-prod`: production site deploy role scoped to the `prod` GitHub environment
+- `formoseaniap-platform-gha-terraform-plan`: read-only Terraform plan/output role scoped to PR plans and `main` deploy output reads
+- `formoseaniap-platform-gha-terraform-apply-prod`: production Terraform apply role scoped to the `prod` GitHub environment
+- `formoseaniap-platform-gha-preview`: optional future preview deploy role scoped to the `preview` GitHub environment
 
 Keep the local AWS MCP role separate from GitHub Actions roles.
 
 ## AWS Setup
 
 1. Create an IAM OIDC identity provider for `https://token.actions.githubusercontent.com` with audience `sts.amazonaws.com`.
-2. Create an IAM role for GitHub Actions and attach one of the trust policies under `docs/examples/`.
-3. Attach the least-privilege permissions policy for the work that role needs to do.
-4. Run the smoke-test workflow manually and pass the role ARN plus region.
+2. Create the three production roles listed above and attach the matching trust policies under `docs/examples/`.
+3. Attach the matching permissions policies under `docs/examples/`.
+4. Run the smoke-test workflow manually against an environment-scoped role such as `formoseaniap-platform-gha-terraform-apply-prod`.
+5. Set the repository variables used by the workflows.
 
 ## Trust Policy Options
 
 - `docs/examples/aws-oidc-trust-policy-branch.json`
   Use this for manual smoke tests or other jobs that should only run from one branch such as `main`.
 - `docs/examples/aws-oidc-trust-policy-environment.json`
-  Use this for jobs that should require a protected GitHub environment such as `preview` or `prod`.
+  Use this for jobs that should require the protected `prod` GitHub environment. Attach this to `formoseaniap-platform-gha-deploy-prod` and `formoseaniap-platform-gha-terraform-apply-prod`.
 - `docs/examples/aws-oidc-trust-policy-pull-request.json`
-  Use this for PR-triggered jobs such as `Terraform Plan` when the job does not reference a GitHub environment.
+  Use this for jobs that only need PR-triggered OIDC without a GitHub environment.
+- `docs/examples/aws-oidc-trust-policy-plan-and-output.json`
+  Use this for `formoseaniap-platform-gha-terraform-plan`, which runs Terraform plan from PR-triggered jobs and reads Terraform outputs from `main` during production site deploy.
 
-Replace these placeholders before use:
+The trust policy examples are prefilled for:
 
-- `123456789012`
-- `YOUR_ORG`
-- `YOUR_REPO`
-- `main`
+- AWS account `760259504838`
+- GitHub repo `FormoSeanIap/formoseaniap-platform`
 - `prod`
-- `preview`
+
+If the repo or account changes, update those values before attaching the policies.
+
+## Permissions Policy Options
+
+- `docs/examples/aws-oidc-policy-deploy-prod.json`
+  Attach to `formoseaniap-platform-gha-deploy-prod`. It can sync objects into the production site bucket and create CloudFront invalidations.
+- `docs/examples/aws-oidc-policy-terraform-plan.json`
+  Attach to `formoseaniap-platform-gha-terraform-plan`. It can read Terraform-managed S3/CloudFront resources and use the S3 state lock file.
+- `docs/examples/aws-oidc-policy-terraform-apply-prod.json`
+  Attach to `formoseaniap-platform-gha-terraform-apply-prod`. It can manage the private S3 site bucket, CloudFront distribution, cache policies, OAC, and Terraform state.
+
+The first-pass Terraform apply policy intentionally grants broad CloudFront access because CloudFront resource-level support is limited across management actions. Tighten the policy after the distribution IDs are stable if needed.
 
 ## Smoke Test Workflow
 
@@ -57,35 +70,38 @@ That is enough to verify the trust policy and the GitHub-side `id-token: write` 
 ## Workflow Mapping For This Repo
 
 - `aws-oidc-smoke.yml`
-  Manual bootstrap check for OIDC trust and AWS role assumption.
+  Manual bootstrap check for OIDC trust and AWS role assumption. The workflow now accepts a `github_environment` input and defaults to `prod`, so it can test environment-scoped roles.
 - `pr-preview.yml`
   Optional preview deploy. Because the deploy job uses the `preview` environment, the OIDC subject should be environment-scoped.
 - `deploy-site-prod.yml`
-  Production site deploy from `main`. Because the deploy job uses the `prod` environment, the OIDC subject should be environment-scoped.
+  Production site deploy from `main`. It first reads `site_bucket_name` and `cloudfront_distribution_id` from Terraform remote state using the read-only Terraform plan/output role, then deploys with the `prod` environment-scoped deploy role.
 - `terraform-plan.yml`
-  PR-triggered validation and optional plan. Because the plan job does not use a GitHub environment, the OIDC subject should be `pull_request`.
+  PR-triggered validation and optional plan. Because the plan job does not use a GitHub environment, the PR OIDC subject should be `pull_request`.
 - `terraform-apply-prod.yml`
   Manual production apply gated by the `prod` environment.
 
 ## GitHub Variables Expected By The Workflows
 
-- `AWS_REGION`
-- `AWS_PREVIEW_ROLE_ARN`
-- `PREVIEW_S3_BUCKET`
+- `AWS_REGION`: `ap-northeast-1`
+- `AWS_PROD_ROLE_ARN`: `arn:aws:iam::760259504838:role/formoseaniap-platform-gha-deploy-prod`
+- `AWS_TERRAFORM_PLAN_ROLE_ARN`: `arn:aws:iam::760259504838:role/formoseaniap-platform-gha-terraform-plan`
+- `AWS_TERRAFORM_APPLY_ROLE_ARN`: `arn:aws:iam::760259504838:role/formoseaniap-platform-gha-terraform-apply-prod`
+- `AWS_PREVIEW_ROLE_ARN` (optional)
+- `PREVIEW_S3_BUCKET` (optional)
 - `PREVIEW_BASE_URL` (optional)
 - `PREVIEW_CLOUDFRONT_DISTRIBUTION_ID` (optional)
-- `AWS_PROD_ROLE_ARN`
-- `PROD_S3_BUCKET`
-- `PROD_CLOUDFRONT_DISTRIBUTION_ID` (optional)
-- `AWS_TERRAFORM_PLAN_ROLE_ARN`
-- `AWS_TERRAFORM_APPLY_ROLE_ARN`
+
+`deploy-site-prod.yml` reads `site_bucket_name` and `cloudfront_distribution_id` from Terraform remote state at run time, so `PROD_S3_BUCKET` and `PROD_CLOUDFRONT_DISTRIBUTION_ID` repository variables are not required.
 
 ## Next Steps For This Repo
 
 When the new AWS account is ready:
 
-1. Create the OIDC identity provider
-2. Create the GitHub Actions roles using the trust policy templates above
-3. Run the smoke-test workflow with one role ARN to confirm trust
-4. Set the repository variables used by the workflows
-5. Protect the `prod` GitHub environment before enabling production deploys
+1. Create the OIDC identity provider if it does not already exist.
+2. Create the GitHub Actions roles using the trust policy and permissions policy templates above.
+3. Protect the `prod` GitHub environment before AWS credentials are issued.
+4. Run the smoke-test workflow with `github_environment=prod`, `aws_region=ap-northeast-1`, and one prod environment-scoped role ARN.
+5. Set `AWS_REGION`, `AWS_TERRAFORM_PLAN_ROLE_ARN`, and `AWS_TERRAFORM_APPLY_ROLE_ARN`.
+6. Run `Terraform Apply Prod` from `main`.
+7. Set `AWS_PROD_ROLE_ARN`.
+8. Deploy from `main`; the deploy workflow will read the production bucket and distribution ID from Terraform remote state.

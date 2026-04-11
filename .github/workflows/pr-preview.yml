@@ -77,4 +77,5 @@ jobs:
 
       - name: Write preview summary
         if: ${{ vars.PREVIEW_BASE_URL != '' }}
-        run: echo "Preview URL: ${{ vars.PREVIEW_BASE_URL }}/pr-${{ github.event.pull_request.number }}/" >> "$GITHUB_STEP_SUMMARY"
+        run: |
+          echo "Preview URL: ${{ vars.PREVIEW_BASE_URL }}/pr-${{ github.event.pull_request.number }}/" >> "$GITHUB_STEP_SUMMARY"

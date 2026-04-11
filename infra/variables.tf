@@ -1,17 +1,89 @@
-variable "podcast_proxy_cors_allow_origins" {
-  default     = ["*"]
-  description = "Origins allowed to read the podcast proxy."
-  type        = list(string)
-}
-
-variable "podcast_proxy_function_name" {
-  default     = "formoseaniap-podcast-proxy"
-  description = "Lambda function name for the podcast proxy."
+variable "aws_region" {
+  default     = "ap-northeast-1"
+  description = "AWS region for regional resources such as the private S3 site origin."
   type        = string
 }
 
-variable "podcast_proxy_log_retention_days" {
-  default     = 14
-  description = "CloudWatch log retention for the podcast proxy."
+variable "cloudfront_price_class" {
+  default     = "PriceClass_200"
+  description = "CloudFront edge location price class."
+  type        = string
+}
+
+variable "cloudfront_wait_for_deployment" {
+  default     = true
+  description = "Whether Terraform should wait for CloudFront distribution changes to finish deploying."
+  type        = bool
+}
+
+variable "default_root_object" {
+  default     = "index.html"
+  description = "CloudFront default root object for the static site."
+  type        = string
+}
+
+variable "environment" {
+  default     = "prod"
+  description = "Deployment environment name."
+  type        = string
+}
+
+variable "podcast_feed_cache_default_ttl_seconds" {
+  default     = 300
+  description = "Default CloudFront TTL for proxied podcast RSS feed responses."
+  type        = number
+}
+
+variable "podcast_feed_cache_max_ttl_seconds" {
+  default     = 900
+  description = "Maximum CloudFront TTL for proxied podcast RSS feed responses."
+  type        = number
+}
+
+variable "podcast_feed_origin_domain" {
+  default     = "feeds.soundon.fm"
+  description = "Third-party podcast RSS origin domain routed through CloudFront."
+  type        = string
+}
+
+variable "podcast_feed_path_pattern" {
+  default     = "/podcasts/*"
+  description = "CloudFront behavior path pattern for same-origin podcast RSS feed reads."
+  type        = string
+}
+
+variable "project_name" {
+  default     = "formoseaniap-platform"
+  description = "Project name prefix used for AWS resources."
+  type        = string
+}
+
+variable "site_bucket_force_destroy" {
+  default     = false
+  description = "Whether Terraform can delete the site bucket even when objects exist. Keep false for production safety."
+  type        = bool
+}
+
+variable "site_bucket_name" {
+  default     = ""
+  description = "Optional explicit private S3 site bucket name. Defaults to a project/environment/account/region-based name."
+  type        = string
+}
+
+variable "site_bucket_versioning_enabled" {
+  default     = true
+  description = "Whether to enable versioning on the private S3 site bucket."
+  type        = bool
+}
+
+variable "static_site_cache_default_ttl_seconds" {
+  default     = 3600
+  description = "Default CloudFront TTL for static site objects."
+  type        = number
+}
+
+variable "static_site_cache_max_ttl_seconds" {
+  default     = 86400
+  description = "Maximum CloudFront TTL for static site objects."
   type        = number
 }

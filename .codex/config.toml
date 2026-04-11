@@ -1,8 +1,31 @@
-# Repo-local Codex default: no approval prompts for in-repo work.
-# Keep access limited to this workspace and keep network disabled.
-approval_policy = "never"
+#:schema https://developers.openai.com/codex/config-schema.json
+
+# Repo-local defaults for trusted Codex sessions in this workspace.
+# This file is only loaded when the project is marked trusted.
+# It helps Codex work inside the repo without approval prompts, but it does not
+# retroactively widen an already-running session or auto-approve destructive
+# app/MCP actions that require explicit consent.
+approval_policy = "on-request"
+sandbox_mode = "workspace-write"
+allow_login_shell = true
+
+[profiles.interactive]
+# Use this when you want Codex to ask instead of failing closed on blocked actions.
+approval_policy = "on-request"
+sandbox_mode = "workspace-write"
+allow_login_shell = true
+
+[profiles.interactive.sandbox_workspace_write]
+network_access = false
+
+[profiles.local_net]
+# Use this when shell commands need network access, including localhost.
+approval_policy = "on-request"
 sandbox_mode = "workspace-write"
 allow_login_shell = false
 
+[profiles.local_net.sandbox_workspace_write]
+network_access = true
+
 [sandbox_workspace_write]
-network_access = false
+network_access = true

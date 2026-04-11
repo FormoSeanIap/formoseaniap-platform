@@ -1,12 +1,7 @@
 terraform {
-  required_version = ">= 1.5.0"
+  required_version = ">= 1.10.0"
 
   required_providers {
-    archive = {
-      source  = "hashicorp/archive"
-      version = "~> 2.5"
-    }
-
     aws = {
       source  = "hashicorp/aws"
       version = "~> 5.0"
@@ -14,76 +9,213 @@ terraform {
   }
 }
 
-provider "aws" {}
+provider "aws" {
+  region = var.aws_region
+}
 
-data "archive_file" "podcast_proxy" {
-  type        = "zip"
-  output_path = "${path.module}/build/podcast-proxy.zip"
+data "aws_caller_identity" "current" {}
 
-  source {
-    content  = file("${path.module}/../scripts/podcast_proxy.py")
-    filename = "podcast_proxy.py"
-  }
+locals {
+  name_prefix       = "${var.project_name}-${var.environment}"
+  s3_origin_id      = "${local.name_prefix}-site-s3"
+  soundon_origin_id = "${local.name_prefix}-soundon-rss"
+  site_bucket_name = (
+    var.site_bucket_name != ""
+    ? var.site_bucket_name
+    : "${local.name_prefix}-site-${data.aws_caller_identity.current.account_id}-${var.aws_region}"
+  )
 
-  source {
-    content  = file("${path.module}/../site/data/podcasts.shows.json")
-    filename = "podcasts.shows.json"
+  tags = {
+    Environment = var.environment
+    Project     = var.project_name
+    ManagedBy   = "terraform"
   }
 }
 
-data "aws_iam_policy_document" "podcast_proxy_assume_role" {
+resource "aws_s3_bucket" "site" {
+  bucket        = local.site_bucket_name
+  force_destroy = var.site_bucket_force_destroy
+
+  tags = merge(local.tags, {
+    Name = local.site_bucket_name
+  })
+}
+
+resource "aws_s3_bucket_public_access_block" "site" {
+  bucket = aws_s3_bucket.site.id
+
+  block_public_acls       = true
+  block_public_policy     = true
+  ignore_public_acls      = true
+  restrict_public_buckets = true
+}
+
+resource "aws_s3_bucket_ownership_controls" "site" {
+  bucket = aws_s3_bucket.site.id
+
+  rule {
+    object_ownership = "BucketOwnerEnforced"
+  }
+}
+
+resource "aws_s3_bucket_server_side_encryption_configuration" "site" {
+  bucket = aws_s3_bucket.site.id
+
+  rule {
+    apply_server_side_encryption_by_default {
+      sse_algorithm = "AES256"
+    }
+  }
+}
+
+resource "aws_s3_bucket_versioning" "site" {
+  bucket = aws_s3_bucket.site.id
+
+  versioning_configuration {
+    status = var.site_bucket_versioning_enabled ? "Enabled" : "Suspended"
+  }
+}
+
+resource "aws_cloudfront_origin_access_control" "site" {
+  name                              = "${local.name_prefix}-site-oac"
+  description                       = "CloudFront access to the private ${local.site_bucket_name} S3 origin."
+  origin_access_control_origin_type = "s3"
+  signing_behavior                  = "always"
+  signing_protocol                  = "sigv4"
+}
+
+resource "aws_cloudfront_cache_policy" "static_site" {
+  name        = "${local.name_prefix}-static-site-cache"
+  comment     = "Cache policy for static portfolio assets served from S3."
+  default_ttl = var.static_site_cache_default_ttl_seconds
+  max_ttl     = var.static_site_cache_max_ttl_seconds
+  min_ttl     = 0
+
+  parameters_in_cache_key_and_forwarded_to_origin {
+    enable_accept_encoding_brotli = true
+    enable_accept_encoding_gzip   = true
+
+    cookies_config {
+      cookie_behavior = "none"
+    }
+
+    headers_config {
+      header_behavior = "none"
+    }
+
+    query_strings_config {
+      query_string_behavior = "none"
+    }
+  }
+}
+
+resource "aws_cloudfront_cache_policy" "podcast_feeds" {
+  name        = "${local.name_prefix}-podcast-feeds-cache"
+  comment     = "Short-lived cache policy for same-origin SoundOn RSS feed reads."
+  default_ttl = var.podcast_feed_cache_default_ttl_seconds
+  max_ttl     = var.podcast_feed_cache_max_ttl_seconds
+  min_ttl     = 0
+
+  parameters_in_cache_key_and_forwarded_to_origin {
+    enable_accept_encoding_brotli = true
+    enable_accept_encoding_gzip   = true
+
+    cookies_config {
+      cookie_behavior = "none"
+    }
+
+    headers_config {
+      header_behavior = "none"
+    }
+
+    query_strings_config {
+      query_string_behavior = "none"
+    }
+  }
+}
+
+resource "aws_cloudfront_distribution" "site" {
+  comment             = "${var.project_name} ${var.environment} static site"
+  default_root_object = var.default_root_object
+  enabled             = true
+  http_version        = "http2and3"
+  is_ipv6_enabled     = true
+  price_class         = var.cloudfront_price_class
+  wait_for_deployment = var.cloudfront_wait_for_deployment
+
+  origin {
+    domain_name              = aws_s3_bucket.site.bucket_regional_domain_name
+    origin_access_control_id = aws_cloudfront_origin_access_control.site.id
+    origin_id                = local.s3_origin_id
+  }
+
+  origin {
+    domain_name = var.podcast_feed_origin_domain
+    origin_id   = local.soundon_origin_id
+
+    custom_origin_config {
+      http_port              = 80
+      https_port             = 443
+      origin_protocol_policy = "https-only"
+      origin_ssl_protocols   = ["TLSv1.2"]
+    }
+  }
+
+  default_cache_behavior {
+    allowed_methods        = ["GET", "HEAD"]
+    cache_policy_id        = aws_cloudfront_cache_policy.static_site.id
+    cached_methods         = ["GET", "HEAD"]
+    compress               = true
+    target_origin_id       = local.s3_origin_id
+    viewer_protocol_policy = "redirect-to-https"
+  }
+
+  ordered_cache_behavior {
+    allowed_methods        = ["GET", "HEAD"]
+    cache_policy_id        = aws_cloudfront_cache_policy.podcast_feeds.id
+    cached_methods         = ["GET", "HEAD"]
+    compress               = true
+    path_pattern           = var.podcast_feed_path_pattern
+    target_origin_id       = local.soundon_origin_id
+    viewer_protocol_policy = "redirect-to-https"
+  }
+
+  restrictions {
+    geo_restriction {
+      locations        = []
+      restriction_type = "none"
+    }
+  }
+
+  viewer_certificate {
+    cloudfront_default_certificate = true
+  }
+
+  tags = local.tags
+}
+
+data "aws_iam_policy_document" "site_bucket" {
   statement {
-    actions = ["sts:AssumeRole"]
+    sid = "AllowCloudFrontRead"
+
+    actions = ["s3:GetObject"]
 
     principals {
-      identifiers = ["lambda.amazonaws.com"]
+      identifiers = ["cloudfront.amazonaws.com"]
       type        = "Service"
     }
-  }
-}
 
-resource "aws_iam_role" "podcast_proxy" {
-  assume_role_policy = data.aws_iam_policy_document.podcast_proxy_assume_role.json
-  name               = var.podcast_proxy_function_name
-}
+    resources = ["${aws_s3_bucket.site.arn}/*"]
 
-resource "aws_iam_role_policy_attachment" "podcast_proxy_basic_execution" {
-  policy_arn = "arn:aws:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole"
-  role       = aws_iam_role.podcast_proxy.name
-}
-
-resource "aws_cloudwatch_log_group" "podcast_proxy" {
-  name              = "/aws/lambda/${var.podcast_proxy_function_name}"
-  retention_in_days = var.podcast_proxy_log_retention_days
-}
-
-resource "aws_lambda_function" "podcast_proxy" {
-  filename         = data.archive_file.podcast_proxy.output_path
-  function_name    = var.podcast_proxy_function_name
-  handler          = "podcast_proxy.lambda_handler"
-  memory_size      = 128
-  role             = aws_iam_role.podcast_proxy.arn
-  runtime          = "python3.11"
-  source_code_hash = data.archive_file.podcast_proxy.output_base64sha256
-  timeout          = 15
-
-  environment {
-    variables = {
-      PODCAST_SHOWS_CONFIG = "podcasts.shows.json"
+    condition {
+      test     = "StringEquals"
+      values   = [aws_cloudfront_distribution.site.arn]
+      variable = "AWS:SourceArn"
     }
   }
-
-  depends_on = [aws_cloudwatch_log_group.podcast_proxy]
 }
 
-resource "aws_lambda_function_url" "podcast_proxy" {
-  authorization_type = "NONE"
-  function_name      = aws_lambda_function.podcast_proxy.function_name
-
-  cors {
-    allow_headers = ["Content-Type"]
-    allow_methods = ["GET", "OPTIONS"]
-    allow_origins = var.podcast_proxy_cors_allow_origins
-    max_age       = 86400
-  }
+resource "aws_s3_bucket_policy" "site" {
+  bucket = aws_s3_bucket.site.id
+  policy = data.aws_iam_policy_document.site_bucket.json
 }

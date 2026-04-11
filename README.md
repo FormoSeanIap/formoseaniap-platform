@@ -2,7 +2,7 @@
 
 Long-term portfolio platform for identity, technical work, and writing.
 
-This project is static-first and deploys to S3/CloudFront, with a small serverless podcast proxy for CORS-safe RSS reads.
+This project is static-first and deploys to S3/CloudFront, with a same-origin podcast feed route for CORS-safe RSS reads.
 
 ## Vision
 
@@ -30,10 +30,16 @@ Implemented:
 - Runtime-loaded podcast section:
   - Dedicated `site/podcasts.html` page
   - Local show config in `site/data/podcasts.shows.json`
-  - Proxy-first RSS loading from configured public podcast feeds on refresh
+  - Same-origin RSS loading from configured public podcast feeds via `feed_proxy_path`
+  - Local proxy fallback via `proxy_url` / `LOCAL_PROXY_URL` for preview and Lambda-compatible testing
   - Icon-first platform actions on show and episode cards
   - Per-show platform links and per-feed failure fallback states
-  - Local Python proxy for preview and AWS Lambda Function URL scaffolding for production
+  - Local Python proxy for localhost preview; production uses CloudFront direct feed routing instead of Lambda
+- Terraform-managed production infrastructure:
+  - S3 remote state backend in `ap-northeast-1`
+  - Private S3 site origin with public access blocked
+  - CloudFront Origin Access Control for S3 reads
+  - CloudFront `/podcasts/*` behavior routed to the SoundOn RSS origin for same-origin browser fetches
 - Python-based article build pipeline:
   - Markdown source in `content/articles/**`
   - Metadata index JSON
@@ -58,9 +64,10 @@ Implemented:
 ## Architecture
 
 Static-first runtime:
-- S3 serves HTML/CSS/JS/JSON/XML files.
+- S3 stores HTML/CSS/JS/JSON/XML files in a private bucket.
+- CloudFront is the public entrypoint and reads S3 through Origin Access Control.
 - No application backend or runtime database is used for core site pages.
-- `podcasts.html` reads configured public RSS feeds through a small podcast proxy, so newly published episodes can appear after refresh without rebuilding the repo.
+- `podcasts.html` reads configured public RSS feeds through same-origin `feed_proxy_path` routes, or through the local/Lambda-compatible proxy when `proxy_url` is configured, so newly published episodes can appear after refresh without rebuilding the repo.
 
 Build-time flow:
 1. Author Markdown in `content/articles/**`
@@ -94,14 +101,16 @@ Build-time flow:
   - examples/
     - aws-oidc-trust-policy-branch.json
     - aws-oidc-trust-policy-environment.json
+    - aws-oidc-trust-policy-plan-and-output.json
     - aws-oidc-trust-policy-pull-request.json
   - inbox.md                quick todo capture
   - backlog.md              curated implementation backlog
 - infra/
   - README.md                  Terraform home and workflow convention
-  - main.tf                    AWS Lambda Function URL for podcast RSS proxy
-  - variables.tf               proxy Terraform variables
-  - outputs.tf                 proxy Function URL output
+  - backend.tf                 S3 remote backend config
+  - main.tf                    private S3 + CloudFront OAC production site stack
+  - variables.tf               production infrastructure variables
+  - outputs.tf                 site bucket and CloudFront outputs
 - scripts/
   - build_articles.py
   - dedupe_bilingual_images.py
@@ -113,7 +122,7 @@ Build-time flow:
   - data/                    generated article JSON + podcast runtime config
     - articles.search.json   lazy-loaded article search index
     - projects.json          project case-study data
-    - podcasts.shows.json    configured podcast feeds + platform links
+    - podcasts.shows.json    upstream podcast feeds, same-origin feed paths, and platform links
   - articles.html            list/filter page
   - article.html             detail page
   - podcasts.html            runtime-loaded podcast landing page
@@ -130,8 +139,8 @@ Build-time flow:
 
 ## Repo-Local Codex Config
 
-- `./.codex/config.toml` sets this repository to `workspace-write` with `approval_policy = "never"`.
-- In a trusted project, that means Codex can read, edit, and run routine local commands inside this repo without approval prompts.
+- `./.codex/config.toml` sets this repository to `workspace-write` with `approval_policy = "on-request"`.
+- In a trusted project, that means Codex can read, edit, and run routine local commands inside this repo, while sandbox-escalated commands can ask for approval when needed.
 - If Codex is launched in a broader machine-level mode such as `danger-full-access`, that already-active session is not retroactively narrowed by `./.codex/config.toml`; the repo file only sets defaults for sessions that honor repo-local config at startup.
 - This repo-local file is ignored unless the project is trusted. If prompts persist, mark this repo as trusted in Codex or add a user-level entry such as `[projects."/home/ubuntu/non_work/formoseaniap-platform"] trust_level = "trusted"` in `~/.codex/config.toml`.
 - This configuration does not grant network access and does not expand access outside the workspace. If you want broader machine-level access, that must be enabled from your user-level Codex config or launch flags instead of this repo file.
@@ -140,7 +149,7 @@ Build-time flow:
 
 - `./.github/workflows/aws-oidc-smoke.yml` is a manual GitHub Actions workflow that validates GitHub OIDC -> AWS role assumption with `aws sts get-caller-identity`.
 - `./docs/aws-oidc-github-actions.md` explains the role split and the bootstrap sequence for moving this repo onto AWS via GitHub Actions.
-- `./docs/examples/aws-oidc-trust-policy-branch.json`, `./docs/examples/aws-oidc-trust-policy-environment.json`, and `./docs/examples/aws-oidc-trust-policy-pull-request.json` provide branch-scoped, environment-scoped, and PR-scoped IAM trust policy templates.
+- `./docs/examples/aws-oidc-trust-policy-branch.json`, `./docs/examples/aws-oidc-trust-policy-environment.json`, `./docs/examples/aws-oidc-trust-policy-plan-and-output.json`, and `./docs/examples/aws-oidc-trust-policy-pull-request.json` provide branch-scoped, environment-scoped, combined plan/output, and PR-scoped IAM trust policy templates.
 
 ## Git Workflow
 
@@ -156,7 +165,7 @@ Build-time flow:
 
 - `./.github/workflows/pr-validate.yml` runs unit tests, rebuilds generated site artifacts, and fails if generated outputs are out of date on pull requests to `develop` and `main`.
 - `./.github/workflows/pr-preview.yml` uploads a `site/` preview artifact for every pull request to `develop` and `main`, and can optionally sync that preview to S3 when preview variables are configured.
-- `./.github/workflows/deploy-site-prod.yml` rebuilds the static site and deploys only the generated `site/` output from `main` when production AWS variables are configured.
+- `./.github/workflows/deploy-site-prod.yml` rebuilds the static site, reads the production bucket and CloudFront distribution ID from Terraform remote state, and deploys only the generated `site/` output from `main` when production AWS variables are configured.
 - `./.github/workflows/terraform-plan.yml` is reserved for Terraform changes under `infra/`, keeps Terraform files under that directory, and runs `fmt`, `validate`, plus an optional OIDC-backed plan on pull requests to `develop` and `main`.
 - `./.github/workflows/terraform-apply-prod.yml` is a manual production apply workflow gated by the `prod` GitHub environment.
 
@@ -294,7 +303,7 @@ Generated outputs:
 
 Podcast runtime config:
 - `site/data/podcasts.shows.json` is source-of-truth for podcast show metadata, feed URLs, and platform links.
-- Podcast episodes are not built into generated artifacts; the browser loads configured feeds live through the podcast proxy at page load.
+- Podcast episodes are not built into generated artifacts; the browser loads configured feeds live through same-origin CloudFront feed routes at page load in production.
 
 ## Local Preview
 
@@ -329,12 +338,13 @@ Expected shape:
 
 ```json
 {
-  "proxy_url": "https://your-podcast-proxy.example.com/podcast-feed",
+  "proxy_url": "",
   "shows": [
     {
       "id": "my-show",
       "title": "My Show",
       "feed_url": "https://public-feed.example.com/rss.xml",
+      "feed_proxy_path": "/podcasts/provider-feed-id.xml",
       "description": "Short show description.",
       "cover_image": "",
       "order": 1,
@@ -351,10 +361,10 @@ Expected shape:
 
 Behavior:
 - `podcasts.html` shows the newest episode globally, then groups the latest 5 loaded episodes per show without removing the featured episode from its show list.
-- Refreshing the page triggers live feed reads through the podcast proxy; publishing a new episode does not require running `scripts/build_articles.py`.
+- Refreshing the page triggers live feed reads through same-origin `feed_proxy_path` routes in production; publishing a new episode does not require running `scripts/build_articles.py`.
 - If a feed cannot be read in the browser, the page falls back to show-level copy and platform links while leaving other feeds intact.
 - On `127.0.0.1` or `localhost`, leaving `proxy_url` blank makes the frontend try `http://127.0.0.1:8787/podcast-feed` automatically for local preview.
-- In production, set `proxy_url` to the Terraform output `podcast_proxy_function_url` and redeploy the site.
+- In production, keep `proxy_url` blank and configure CloudFront to route `/podcasts/*` to the SoundOn RSS origin. Set `proxy_url` only if you intentionally switch back to a local/Lambda-compatible proxy endpoint.
 
 Collection-first list page UX:
 - `articles.html` shows collection/work cards by default rather than raw article cards.
@@ -431,7 +441,22 @@ Important:
 
 - Keep Terraform for this repository under `infra/`.
 - Start with a single root stack under `infra/`.
+- The `infra/` root uses S3 remote state in `formoseaniap-platform-tfstate-760259504838-ap-northeast-1-an` with native S3 lock files.
+- The production stack creates the private site bucket and CloudFront distribution; the production deploy workflow reads output `site_bucket_name` and output `cloudfront_distribution_id` from Terraform remote state at run time.
 - If infrastructure later splits into multiple stacks or modules, update the Terraform workflows to target each stack explicitly.
+
+## AWS Deployment Next Steps
+
+Resume AWS rollout from these steps:
+
+1. Create the GitHub Actions OIDC identity provider in AWS if it does not already exist.
+2. Create the IAM roles and policies from `docs/aws-oidc-github-actions.md`.
+3. Use `docs/examples/aws-oidc-trust-policy-plan-and-output.json` for the Terraform plan/output role, because production deploy reads Terraform outputs from remote state on `main`.
+4. Set GitHub repository variables: `AWS_REGION`, `AWS_TERRAFORM_PLAN_ROLE_ARN`, `AWS_TERRAFORM_APPLY_ROLE_ARN`, and `AWS_PROD_ROLE_ARN`.
+5. Run `AWS OIDC Smoke` against a `prod` environment-scoped role.
+6. Run `Terraform Apply Prod` from `main` to create the private S3 bucket, CloudFront OAC distribution, and `/podcasts/*` SoundOn origin behavior.
+7. Deploy from `main`; `Deploy Site Prod` reads `site_bucket_name` and `cloudfront_distribution_id` from Terraform remote state, so `PROD_S3_BUCKET` and `PROD_CLOUDFRONT_DISTRIBUTION_ID` variables are not required.
+8. Verify the CloudFront distribution serves the static site and that `podcasts.html` loads live episodes through same-origin `/podcasts/*.xml` feed paths.
 
 ## Style Direction
 

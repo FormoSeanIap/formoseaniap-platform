@@ -8,10 +8,10 @@ Curated follow-up work for the portfolio platform.
 
 ## Next
 
-- [ ] Deploy the podcast proxy and set `proxy_url`
+- [ ] Deploy the podcast feed route
   - Why: SoundOn RSS feeds are reachable by `curl` but not directly by browser `fetch()` because the feed responses do not expose permissive CORS headers.
-  - Scope: apply `infra/`, capture the Lambda Function URL output, set `site/data/podcasts.shows.json.proxy_url`, and verify both localhost and deployed-site refresh behavior.
-  - Done when: `podcasts.html` and the home teaser load live episodes through the proxy on refresh without direct browser-to-SoundOn fetches.
+  - Scope: configure CloudFront to route `site/data/podcasts.shows.json.feed_proxy_path` requests to the SoundOn RSS origin, keep the local `proxy_url` path for preview/Lambda-compatible testing, and verify both localhost and deployed-site refresh behavior.
+  - Done when: `podcasts.html` and the home teaser load live episodes through same-origin CloudFront feed paths in production without direct browser-to-SoundOn fetches.
 
 - [ ] Populate podcast platform links
   - Why: SoundOn links are configured, but Spotify, Apple Podcasts, and KKBOX URLs are still blank.
@@ -20,4 +20,7 @@ Curated follow-up work for the portfolio platform.
 
 ## Later
 
-- _None_
+- [ ] Add custom domain for the production site
+  - Why: the site will eventually need a branded public hostname instead of the default CloudFront domain.
+  - Scope: buy the domain, request the viewer certificate in ACM `us-east-1`, add the Route 53 hosted zone and alias records, attach the certificate and aliases to the CloudFront distribution, and update any deploy/runtime configuration that currently assumes provider-generated URLs.
+  - Done when: the production site is reachable on the purchased domain over HTTPS and the old CloudFront hostname is no longer the primary public entrypoint.

@@ -50,16 +50,16 @@ This repository uses a two-tier branch model.
 
 Set these as GitHub repository variables when the AWS side is ready:
 
-- `AWS_REGION`
-- `AWS_PREVIEW_ROLE_ARN`
-- `PREVIEW_S3_BUCKET`
+- `AWS_REGION`: `ap-northeast-1`
+- `AWS_PROD_ROLE_ARN`: `arn:aws:iam::760259504838:role/formoseaniap-platform-gha-deploy-prod`
+- `AWS_TERRAFORM_PLAN_ROLE_ARN`: `arn:aws:iam::760259504838:role/formoseaniap-platform-gha-terraform-plan`
+- `AWS_TERRAFORM_APPLY_ROLE_ARN`: `arn:aws:iam::760259504838:role/formoseaniap-platform-gha-terraform-apply-prod`
+- `AWS_PREVIEW_ROLE_ARN` (optional)
+- `PREVIEW_S3_BUCKET` (optional)
 - `PREVIEW_BASE_URL` (optional)
 - `PREVIEW_CLOUDFRONT_DISTRIBUTION_ID` (optional)
-- `AWS_PROD_ROLE_ARN`
-- `PROD_S3_BUCKET`
-- `PROD_CLOUDFRONT_DISTRIBUTION_ID` (optional)
-- `AWS_TERRAFORM_PLAN_ROLE_ARN`
-- `AWS_TERRAFORM_APPLY_ROLE_ARN`
+
+Production deploy reads `site_bucket_name` and `cloudfront_distribution_id` from Terraform remote state, so separate `PROD_S3_BUCKET` and `PROD_CLOUDFRONT_DISTRIBUTION_ID` variables are not required.
 
 ## Resulting Workflow Split
 
