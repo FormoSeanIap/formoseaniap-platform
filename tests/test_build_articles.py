@@ -9,6 +9,7 @@ from scripts.build_articles import (
     propagate_series_cover_images,
     resolve_frontmatter_asset_ref,
     resolve_local_ref,
+    validate_filesystem_safe_rel_path,
 )
 
 
@@ -104,6 +105,15 @@ class MarkdownToHtmlBreakTests(unittest.TestCase):
 
 
 class LocalAssetResolutionTests(unittest.TestCase):
+    def test_invalid_filesystem_chars_are_rejected_for_assets(self) -> None:
+        with self.assertRaisesRegex(
+            ValueError,
+            r'filesystem-invalid characters .*reviews/Anime_Manga/Frieren: Beyond Journey\'s End/Shared/image\.png',
+        ):
+            validate_filesystem_safe_rel_path(
+                Path("reviews/Anime_Manga/Frieren: Beyond Journey's End/Shared/image.png")
+            )
+
     def test_parent_shared_asset_path_resolves(self) -> None:
         rewritten = resolve_local_ref(
             Path(
@@ -130,6 +140,11 @@ class LocalAssetResolutionTests(unittest.TestCase):
         self.assertEqual(
             rewritten,
             "assets/articles/reviews/Movie/A_Foggy_Tale/Shared/source_https_www_instagram_com_p_dpsuxclkjzw.png",
+        )
+
+    def test_filesystem_safe_asset_paths_are_accepted(self) -> None:
+        validate_filesystem_safe_rel_path(
+            Path("reviews/Anime_Manga/Frieren_Beyond_Journeys_End/Season1_Season2/Shared/image.png")
         )
 
     def test_frontmatter_cover_path_resolves(self) -> None:

@@ -64,6 +64,7 @@ GENERIC_SERIES_NAMES = {
     "part4",
     "part5",
 }
+INVALID_ARTIFACT_PATH_CHARS = {'"', ":", "<", ">", "|", "*", "?"}
 
 
 def humanize_token(value: str) -> str:
@@ -71,6 +72,18 @@ def humanize_token(value: str) -> str:
     if re.search(r"[A-Z]", normalized):
         return normalized
     return normalized.title()
+
+
+def validate_filesystem_safe_rel_path(rel_path: Path) -> None:
+    invalid_chars = sorted({char for part in rel_path.parts for char in part if char in INVALID_ARTIFACT_PATH_CHARS})
+    if not invalid_chars:
+        return
+
+    invalid_display = " ".join(invalid_chars)
+    raise ValueError(
+        "Article asset paths must not contain filesystem-invalid characters "
+        f"({invalid_display}): {rel_path.as_posix()}"
+    )
 
 
 def derive_subcategory_metadata(parts: list[str]) -> tuple[str, str]:
@@ -922,6 +935,15 @@ def copy_assets() -> None:
         shutil.copy2(path, dst)
 
 
+def validate_content_asset_paths() -> None:
+    for path in CONTENT_DIR.rglob("*"):
+        if not path.is_file():
+            continue
+        if path.suffix.lower() == ".md":
+            continue
+        validate_filesystem_safe_rel_path(path.relative_to(CONTENT_DIR))
+
+
 def resolve_local_ref(source_rel: Path, ref_url: str, source_to_page: dict[str, str]) -> str:
     if not ref_url:
         return ref_url
@@ -1304,6 +1326,7 @@ def main() -> None:
     if not isinstance(base_tags, dict):
         raise ValueError("content/tags.json must be an object")
 
+    validate_content_asset_paths()
     ensure_output_dirs()
     copy_assets()
     records = load_articles()

@@ -214,6 +214,7 @@ Build support is broader than the preferred layout:
 - Nested frontmatter-based files are fully supported.
 - Legacy nested files without frontmatter are also supported.
 - For frontmatter-free legacy files, metadata is inferred from path + content.
+- Asset folder and file names under `content/articles/**` must avoid `:"<>|*?` so generated site assets can be uploaded through GitHub Actions artifacts on all supported filesystems.
 
 Required frontmatter fields:
 - `id`

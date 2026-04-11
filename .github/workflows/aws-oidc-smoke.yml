@@ -28,7 +28,7 @@ jobs:
     environment: ${{ inputs.github_environment }}
     steps:
       - name: Configure AWS credentials from GitHub OIDC
-        uses: aws-actions/configure-aws-credentials@v5.1.1
+        uses: aws-actions/configure-aws-credentials@v6
         with:
           aws-region: ${{ inputs.aws_region }}
           role-to-assume: ${{ inputs.aws_role_arn }}

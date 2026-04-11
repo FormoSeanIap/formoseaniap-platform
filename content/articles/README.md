@@ -71,6 +71,7 @@ Rules:
 - If the caption text contains double quotes, escape them as `\"` inside the image title.
 - If English and Mandarin versions use the exact same image, store it once in a `Shared/` folder under the common work/article parent and reference it relatively.
 - Keep images inside `English/` or `Mandarin/` only when the underlying binaries differ.
+- Folder and asset names under `content/articles/**` must avoid `:"<>|*?` so generated site assets remain uploadable through GitHub Actions artifacts across filesystems.
 - `series_cover_image` may be an absolute `/assets/...` path or a relative asset path from the markdown file.
 - When multiple files belong to the same `series_id`, any non-empty `series_cover_image` values must resolve to the same final asset path or the build will fail.
 - Prefer storing collection covers in an existing work-local `Shared/` folder so the cover lives with the source material and is copied into `site/assets/articles/**` automatically.
