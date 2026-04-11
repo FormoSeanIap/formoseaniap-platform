@@ -59,7 +59,7 @@ Implemented:
   - JSON-driven frontend pages (`site/articles.html`, `site/article.html`)
   - JSON-driven Projects page (`site/projects.html`)
   - Project case-study cards support featured entries, status badges, highlight lists, and optional private-repo notes via `site/data/projects.json`
-  - GitHub Actions scaffolding for integration-branch PR validation, supplemental `develop` push validation, preview artifacts, production site deploys from `main`, and Terraform validate/plan/apply workflows under `infra/`
+  - GitHub Actions scaffolding for work-branch and long-lived branch push validation, PR validation with previews, and `main`-gated production promotion for site and Terraform changes under `infra/`
 
 ## Architecture
 
@@ -80,15 +80,14 @@ Build-time flow:
 ```text
 /
 - .github/
+  - actions/
+    - site-validate/action.yml   shared site validation steps for PR/push/main workflows
   - workflows/
     - aws-oidc-smoke.yml        manual GitHub OIDC -> AWS trust smoke test
-    - develop-push-validate.yml develop push tests + site build + generated-artifact drift check
-    - pr-validate.yml           PR tests + site build + generated-artifact drift check
-    - pr-preview.yml            PR artifact preview + optional hosted preview deploy
-    - deploy-site-prod.yml      build and deploy the static site from `main`
-    - terraform-validate-develop.yml develop push Terraform fmt + validate checks
-    - terraform-plan.yml        Terraform PR checks for `infra/`
-    - terraform-apply-prod.yml  manual prod-gated Terraform apply
+    - _terraform-validate-shared.yml reusable Terraform change detection + validation
+    - push-others.yml           `Push Others`: push validation for work branches and `develop`
+    - pr-validate.yml           `PR Validate`: PR validation, preview, and optional Terraform plan
+    - push-main.yml             `Push Main`: main-branch validation + gated production promotion
 - .codex/
   - config.toml                 repo-local Codex sandbox/approval defaults
   - skills/
@@ -151,7 +150,7 @@ Build-time flow:
 
 - `./.github/workflows/aws-oidc-smoke.yml` is a manual GitHub Actions workflow that validates GitHub OIDC -> AWS role assumption with `aws sts get-caller-identity`.
 - `./docs/aws-oidc-github-actions.md` explains the role split and the bootstrap sequence for moving this repo onto AWS via GitHub Actions.
-- `./docs/examples/aws-oidc-trust-policy-branch.json`, `./docs/examples/aws-oidc-trust-policy-environment.json`, `./docs/examples/aws-oidc-trust-policy-plan-and-output.json`, and `./docs/examples/aws-oidc-trust-policy-pull-request.json` provide branch-scoped, environment-scoped, combined plan/output, and PR-scoped IAM trust policy templates.
+- `./docs/examples/aws-oidc-trust-policy-branch.json`, `./docs/examples/aws-oidc-trust-policy-environment.json`, `./docs/examples/aws-oidc-trust-policy-plan-and-output.json`, and `./docs/examples/aws-oidc-trust-policy-pull-request.json` provide branch-scoped, environment-scoped, main/PR plan, and PR-scoped IAM trust policy templates.
 
 ## Git Workflow
 
@@ -161,17 +160,14 @@ Build-time flow:
 - Open `hotfix/*` branches from the latest `main`, merge them to `main`, then merge or cherry-pick them back into `develop`.
 - Merge feature work into `develop` through pull requests; prefer squash merges there.
 - Release by opening a pull request from `develop` to `main`; prefer a normal merge commit for release PRs so release boundaries stay visible.
+- Push-time validation runs on work branches and `develop`; `main` validation runs inside `Push Main` before the protected production gate.
 - GitHub-side branch protection, auto-delete, and merge-strategy settings are documented in `./docs/github-branching.md`.
 
 ## CI/CD Workflow
 
-- `./.github/workflows/develop-push-validate.yml` runs unit tests, rebuilds generated site artifacts, and fails on generated-artifact drift for direct pushes to `develop`.
-- `./.github/workflows/pr-validate.yml` runs unit tests, rebuilds generated site artifacts, and fails if generated outputs are out of date on pull requests to `develop` and `main`.
-- `./.github/workflows/pr-preview.yml` uploads a `site/` preview artifact for every pull request to `develop` and `main`, and can optionally sync that preview to S3 when preview variables are configured.
-- `./.github/workflows/deploy-site-prod.yml` rebuilds the static site, fails on generated-artifact drift, reads the production bucket and CloudFront distribution ID from Terraform remote state, and deploys only the generated `site/` output from `main` when production AWS variables are configured.
-- `./.github/workflows/terraform-validate-develop.yml` enforces `infra/` placement and runs push-safe Terraform `fmt` + `validate` checks on `develop` when Terraform-related files change.
-- `./.github/workflows/terraform-plan.yml` is reserved for Terraform changes under `infra/`, keeps Terraform files under that directory, and runs `fmt`, `validate`, plus an optional OIDC-backed plan on pull requests to `develop` and `main`.
-- `./.github/workflows/terraform-apply-prod.yml` is a manual production apply workflow gated by the `prod` GitHub environment.
+- `./.github/workflows/push-others.yml` runs unit tests, rebuilds generated site artifacts, fails on generated-artifact drift, and adds push-safe Terraform validation when Terraform-related files changed on `feature/*`, `fix/*`, `chore/*`, `docs/*`, `hotfix/*`, and `develop`.
+- `./.github/workflows/pr-validate.yml` runs unit tests, rebuilds generated site artifacts, fails if generated outputs are out of date, uploads a preview artifact, performs shared Terraform validation plus an optional OIDC-backed Terraform plan, and only proceeds to preview status/deploy after the Terraform PR checks are complete.
+- `./.github/workflows/push-main.yml` re-runs the same validation path on `main`, can publish a Terraform plan artifact for infra changes, and waits at the protected `prod` environment before applying Terraform changes, reading production outputs from remote state, and deploying the generated `site/` output.
 
 ## Planning Workflow
 
@@ -456,12 +452,13 @@ Resume AWS rollout from these steps:
 
 1. Create the GitHub Actions OIDC identity provider in AWS if it does not already exist.
 2. Create the IAM roles and policies from `docs/aws-oidc-github-actions.md`.
-3. Use `docs/examples/aws-oidc-trust-policy-plan-and-output.json` for the Terraform plan/output role, because production deploy reads Terraform outputs from remote state on `main`.
+3. Use `docs/examples/aws-oidc-trust-policy-plan-and-output.json` for the Terraform plan role, because PRs and optional main-branch pre-promotion plans still use a read-only role.
 4. Set GitHub repository variables: `AWS_REGION`, `AWS_TERRAFORM_PLAN_ROLE_ARN`, `AWS_TERRAFORM_APPLY_ROLE_ARN`, and `AWS_PROD_ROLE_ARN`.
 5. Run `AWS OIDC Smoke` against a `prod` environment-scoped role.
-6. Run `Terraform Apply Prod` from `main` to create the private S3 bucket, CloudFront OAC distribution, and `/podcasts/*` SoundOn origin behavior.
-7. Deploy from `main`; `Deploy Site Prod` reads `site_bucket_name` and `cloudfront_distribution_id` from Terraform remote state, so `PROD_S3_BUCKET` and `PROD_CLOUDFRONT_DISTRIBUTION_ID` variables are not required.
-8. Verify the CloudFront distribution serves the static site and that `podcasts.html` loads live episodes through same-origin `/podcasts/*.xml` feed paths.
+6. Merge or push the release to `main`.
+7. Review the optional Terraform plan artifact when infra changed, then approve the protected `prod` environment in `Push Main`.
+8. Let the gated `Push Main` workflow apply infrastructure changes, if any, and deploy the generated site; it reads `site_bucket_name` and `cloudfront_distribution_id` from Terraform remote state, so `PROD_S3_BUCKET` and `PROD_CLOUDFRONT_DISTRIBUTION_ID` variables are not required.
+9. Verify the CloudFront distribution serves the static site and that `podcasts.html` loads live episodes through same-origin `/podcasts/*.xml` feed paths.
 
 ## Style Direction
 

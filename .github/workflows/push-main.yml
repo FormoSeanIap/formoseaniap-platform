@@ -1,0 +1,174 @@
+name: Push Main
+
+on:
+  push:
+    branches:
+      - main
+
+permissions:
+  contents: read
+  id-token: write
+
+concurrency:
+  group: deploy-site-prod-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v5
+
+      - name: Run shared site validation
+        uses: ./.github/actions/site-validate
+        with:
+          upload_site_artifact: "true"
+          site_artifact_name: site-prod-${{ github.run_id }}
+
+  terraform_validate:
+    uses: ./.github/workflows/_terraform-validate-shared.yml
+    with:
+      compare_base_sha: ${{ github.event.before }}
+      compare_head_sha: ${{ github.sha }}
+
+  terraform_plan:
+    needs:
+      - validate
+      - terraform_validate
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        shell: bash
+        working-directory: infra
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v5
+
+      - name: Set up Terraform
+        uses: hashicorp/setup-terraform@v4
+        with:
+          terraform_wrapper: false
+
+      - name: Note Terraform plan status when no Terraform changes were pushed
+        if: ${{ needs.terraform_validate.outputs.has_tf_changes != 'true' }}
+        run: echo "No Terraform changes detected on this main push." >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Note Terraform plan status when AWS is not configured
+        if: ${{ needs.terraform_validate.outputs.has_tf_changes == 'true' && needs.terraform_validate.outputs.has_tf_root == 'true' && (vars.AWS_REGION == '' || vars.AWS_TERRAFORM_PLAN_ROLE_ARN == '') }}
+        run: echo "Set AWS_REGION and AWS_TERRAFORM_PLAN_ROLE_ARN repo variables to enable Terraform plan artifacts on main pushes." >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Configure AWS credentials from GitHub OIDC
+        if: ${{ needs.terraform_validate.outputs.has_tf_changes == 'true' && needs.terraform_validate.outputs.has_tf_root == 'true' && vars.AWS_REGION != '' && vars.AWS_TERRAFORM_PLAN_ROLE_ARN != '' }}
+        uses: aws-actions/configure-aws-credentials@v6
+        with:
+          aws-region: ${{ vars.AWS_REGION }}
+          role-to-assume: ${{ vars.AWS_TERRAFORM_PLAN_ROLE_ARN }}
+          role-session-name: gha-terraform-plan-main-${{ github.run_id }}
+
+      - name: Terraform init
+        if: ${{ needs.terraform_validate.outputs.has_tf_changes == 'true' && needs.terraform_validate.outputs.has_tf_root == 'true' && vars.AWS_REGION != '' && vars.AWS_TERRAFORM_PLAN_ROLE_ARN != '' }}
+        run: terraform init -input=false
+
+      - name: Terraform plan
+        if: ${{ needs.terraform_validate.outputs.has_tf_changes == 'true' && needs.terraform_validate.outputs.has_tf_root == 'true' && vars.AWS_REGION != '' && vars.AWS_TERRAFORM_PLAN_ROLE_ARN != '' }}
+        run: terraform plan -input=false -no-color -out=tfplan
+
+      - name: Render textual plan
+        if: ${{ needs.terraform_validate.outputs.has_tf_changes == 'true' && needs.terraform_validate.outputs.has_tf_root == 'true' && vars.AWS_REGION != '' && vars.AWS_TERRAFORM_PLAN_ROLE_ARN != '' }}
+        run: terraform show -no-color tfplan > tfplan.txt
+
+      - name: Upload plan artifacts
+        if: ${{ needs.terraform_validate.outputs.has_tf_changes == 'true' && needs.terraform_validate.outputs.has_tf_root == 'true' && vars.AWS_REGION != '' && vars.AWS_TERRAFORM_PLAN_ROLE_ARN != '' }}
+        uses: actions/upload-artifact@v6
+        with:
+          name: terraform-plan-main-${{ github.run_id }}
+          path: |
+            infra/tfplan
+            infra/tfplan.txt
+          if-no-files-found: error
+
+      - name: Note production promotion status when Terraform root is missing
+        if: ${{ needs.terraform_validate.outputs.has_tf_root != 'true' }}
+        run: echo "Production promotion skipped because no Terraform root exists under infra/." >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Note production promotion status when deploy credentials are not configured
+        if: ${{ needs.terraform_validate.outputs.has_tf_root == 'true' && (vars.AWS_REGION == '' || vars.AWS_TERRAFORM_APPLY_ROLE_ARN == '' || vars.AWS_PROD_ROLE_ARN == '') }}
+        run: echo "Set AWS_REGION, AWS_TERRAFORM_APPLY_ROLE_ARN, and AWS_PROD_ROLE_ARN repo variables to enable production promotion from main." >> "$GITHUB_STEP_SUMMARY"
+
+  promote_prod:
+    needs:
+      - validate
+      - terraform_validate
+      - terraform_plan
+    if: ${{ needs.terraform_validate.outputs.has_tf_root == 'true' && vars.AWS_REGION != '' && vars.AWS_TERRAFORM_APPLY_ROLE_ARN != '' && vars.AWS_PROD_ROLE_ARN != '' }}
+    runs-on: ubuntu-latest
+    environment: prod
+    defaults:
+      run:
+        shell: bash
+
+    steps:
+      - name: Download production artifact
+        uses: actions/download-artifact@v7
+        with:
+          name: site-prod-${{ github.run_id }}
+          path: prod-site
+
+      - name: Check out repository
+        uses: actions/checkout@v5
+
+      - name: Set up Terraform
+        uses: hashicorp/setup-terraform@v4
+        with:
+          terraform_wrapper: false
+
+      - name: Configure Terraform apply credentials from GitHub OIDC
+        uses: aws-actions/configure-aws-credentials@v6
+        with:
+          aws-region: ${{ vars.AWS_REGION }}
+          role-to-assume: ${{ vars.AWS_TERRAFORM_APPLY_ROLE_ARN }}
+          role-session-name: gha-terraform-apply-main-${{ github.run_id }}
+
+      - name: Terraform init
+        working-directory: infra
+        run: terraform init -input=false
+
+      - name: Terraform plan
+        if: ${{ needs.terraform_validate.outputs.has_tf_changes == 'true' }}
+        working-directory: infra
+        run: terraform plan -input=false -no-color -out=tfplan
+
+      - name: Terraform apply
+        if: ${{ needs.terraform_validate.outputs.has_tf_changes == 'true' }}
+        working-directory: infra
+        run: terraform apply -input=false -auto-approve tfplan
+
+      - name: Read Terraform outputs
+        id: tf_outputs
+        working-directory: infra
+        run: |
+          set -euo pipefail
+
+          site_bucket_name="$(terraform output -raw site_bucket_name)"
+          cloudfront_distribution_id="$(terraform output -raw cloudfront_distribution_id)"
+
+          echo "site_bucket_name=${site_bucket_name}" >> "$GITHUB_OUTPUT"
+          echo "cloudfront_distribution_id=${cloudfront_distribution_id}" >> "$GITHUB_OUTPUT"
+          echo "- Production S3 bucket: \`${site_bucket_name}\`" >> "$GITHUB_STEP_SUMMARY"
+          echo "- Production CloudFront distribution: \`${cloudfront_distribution_id}\`" >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Configure production deploy credentials from GitHub OIDC
+        uses: aws-actions/configure-aws-credentials@v6
+        with:
+          aws-region: ${{ vars.AWS_REGION }}
+          role-to-assume: ${{ vars.AWS_PROD_ROLE_ARN }}
+          role-session-name: gha-site-prod-${{ github.run_id }}
+
+      - name: Sync site to S3
+        run: aws s3 sync prod-site/ "s3://${{ steps.tf_outputs.outputs.site_bucket_name }}/" --delete
+
+      - name: Invalidate production CloudFront cache
+        run: aws cloudfront create-invalidation --distribution-id "${{ steps.tf_outputs.outputs.cloudfront_distribution_id }}" --paths "/*"

@@ -1,0 +1,35 @@
+name: Push Others
+
+on:
+  push:
+    branches:
+      - develop
+      - "feature/**"
+      - "fix/**"
+      - "chore/**"
+      - "docs/**"
+      - "hotfix/**"
+
+permissions:
+  contents: read
+
+concurrency:
+  group: push-validate-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v5
+
+      - name: Run shared site validation
+        uses: ./.github/actions/site-validate
+
+  terraform_validate:
+    uses: ./.github/workflows/_terraform-validate-shared.yml
+    with:
+      compare_base_sha: ${{ github.event.before }}
+      compare_head_sha: ${{ github.sha }}

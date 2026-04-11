@@ -8,6 +8,7 @@ on:
 
 permissions:
   contents: read
+  id-token: write
 
 concurrency:
   group: pr-validate-${{ github.event.pull_request.number }}
@@ -21,18 +22,152 @@ jobs:
       - name: Check out repository
         uses: actions/checkout@v5
 
-      - name: Set up Python
-        uses: actions/setup-python@v6
+      - name: Run shared site validation
+        uses: ./.github/actions/site-validate
         with:
-          python-version: "3.11"
+          upload_site_artifact: "true"
+          site_artifact_name: site-preview-${{ github.event.pull_request.number }}
 
-      - name: Run unit tests
-        run: python3 -m unittest discover -s tests -p 'test_*.py'
+  terraform_validate:
+    uses: ./.github/workflows/_terraform-validate-shared.yml
+    with:
+      compare_base_sha: ${{ github.event.pull_request.base.sha }}
+      compare_head_sha: ${{ github.event.pull_request.head.sha }}
 
-      - name: Build generated site artifacts
-        run: python3 scripts/build_articles.py
+  terraform_plan:
+    needs: terraform_validate
+    if: ${{ needs.terraform_validate.outputs.has_tf_changes == 'true' && needs.terraform_validate.outputs.has_tf_root == 'true' }}
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        shell: bash
+        working-directory: infra
 
-      - name: Ensure generated outputs are committed
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v5
+
+      - name: Set up Terraform
+        uses: hashicorp/setup-terraform@v4
+        with:
+          terraform_wrapper: false
+
+      - name: Note plan status when AWS is not configured
+        if: ${{ vars.AWS_REGION == '' || vars.AWS_TERRAFORM_PLAN_ROLE_ARN == '' }}
+        run: echo "Set AWS_REGION and AWS_TERRAFORM_PLAN_ROLE_ARN repo variables to enable terraform plan runs." >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Configure AWS credentials from GitHub OIDC
+        if: ${{ vars.AWS_REGION != '' && vars.AWS_TERRAFORM_PLAN_ROLE_ARN != '' }}
+        uses: aws-actions/configure-aws-credentials@v6
+        with:
+          aws-region: ${{ vars.AWS_REGION }}
+          role-to-assume: ${{ vars.AWS_TERRAFORM_PLAN_ROLE_ARN }}
+          role-session-name: gha-terraform-plan-${{ github.event.pull_request.number }}
+
+      - name: Terraform init for plan
+        if: ${{ vars.AWS_REGION != '' && vars.AWS_TERRAFORM_PLAN_ROLE_ARN != '' }}
+        run: terraform init -input=false
+
+      - name: Terraform plan
+        if: ${{ vars.AWS_REGION != '' && vars.AWS_TERRAFORM_PLAN_ROLE_ARN != '' }}
+        run: terraform plan -input=false -no-color -out=tfplan
+
+      - name: Render textual plan
+        if: ${{ vars.AWS_REGION != '' && vars.AWS_TERRAFORM_PLAN_ROLE_ARN != '' }}
+        run: terraform show -no-color tfplan > tfplan.txt
+
+      - name: Upload plan artifacts
+        if: ${{ vars.AWS_REGION != '' && vars.AWS_TERRAFORM_PLAN_ROLE_ARN != '' }}
+        uses: actions/upload-artifact@v6
+        with:
+          name: terraform-plan-${{ github.event.pull_request.number }}
+          path: |
+            infra/tfplan
+            infra/tfplan.txt
+          if-no-files-found: error
+
+  preview_ready:
+    needs:
+      - terraform_validate
+      - terraform_plan
+    if: ${{ always() }}
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Ensure Terraform PR checks completed before preview
+        shell: bash
+        env:
+          TF_VALIDATE_RESULT: ${{ needs.terraform_validate.result }}
+          TF_PLAN_RESULT: ${{ needs.terraform_plan.result }}
         run: |
-          git diff --stat -- site/data site/assets/articles site/rss.xml site/zh/rss.xml
-          git diff --exit-code -- site/data site/assets/articles site/rss.xml site/zh/rss.xml
+          set -euo pipefail
+
+          case "${TF_VALIDATE_RESULT}" in
+            success)
+              ;;
+            *)
+              echo "Preview is blocked because terraform_validate finished with status: ${TF_VALIDATE_RESULT}" >&2
+              exit 1
+              ;;
+          esac
+
+          case "${TF_PLAN_RESULT}" in
+            success|skipped)
+              ;;
+            *)
+              echo "Preview is blocked because terraform_plan finished with status: ${TF_PLAN_RESULT}" >&2
+              exit 1
+              ;;
+          esac
+
+  note_preview_status:
+    needs:
+      - validate
+      - preview_ready
+    if: ${{ vars.AWS_REGION == '' || vars.AWS_PREVIEW_ROLE_ARN == '' || vars.PREVIEW_S3_BUCKET == '' || github.event.pull_request.head.repo.full_name != github.repository }}
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Note hosted preview status
+        run: |
+          echo "Hosted preview deploy skipped." >> "$GITHUB_STEP_SUMMARY"
+          echo "- The preview artifact is still attached to this workflow run." >> "$GITHUB_STEP_SUMMARY"
+          if [ "${{ github.event.pull_request.head.repo.full_name }}" != "${{ github.repository }}" ]; then
+            echo "- Hosted preview deploys only run for branches inside this repository." >> "$GITHUB_STEP_SUMMARY"
+          else
+            echo "- Set AWS_REGION, AWS_PREVIEW_ROLE_ARN, and PREVIEW_S3_BUCKET repo variables to enable S3 preview deploys." >> "$GITHUB_STEP_SUMMARY"
+          fi
+
+  deploy_preview:
+    needs:
+      - validate
+      - preview_ready
+    if: ${{ vars.AWS_REGION != '' && vars.AWS_PREVIEW_ROLE_ARN != '' && vars.PREVIEW_S3_BUCKET != '' && github.event.pull_request.head.repo.full_name == github.repository }}
+    runs-on: ubuntu-latest
+    environment: preview
+
+    steps:
+      - name: Download preview artifact
+        uses: actions/download-artifact@v7
+        with:
+          name: site-preview-${{ github.event.pull_request.number }}
+          path: preview-site
+
+      - name: Configure AWS credentials from GitHub OIDC
+        uses: aws-actions/configure-aws-credentials@v6
+        with:
+          aws-region: ${{ vars.AWS_REGION }}
+          role-to-assume: ${{ vars.AWS_PREVIEW_ROLE_ARN }}
+          role-session-name: gha-preview-${{ github.event.pull_request.number }}
+
+      - name: Sync preview site to S3
+        run: aws s3 sync preview-site/ "s3://${{ vars.PREVIEW_S3_BUCKET }}/pr-${{ github.event.pull_request.number }}/" --delete
+
+      - name: Invalidate preview CloudFront cache
+        if: ${{ vars.PREVIEW_CLOUDFRONT_DISTRIBUTION_ID != '' }}
+        run: aws cloudfront create-invalidation --distribution-id "${{ vars.PREVIEW_CLOUDFRONT_DISTRIBUTION_ID }}" --paths "/pr-${{ github.event.pull_request.number }}/*"
+
+      - name: Write preview summary
+        if: ${{ vars.PREVIEW_BASE_URL != '' }}
+        run: |
+          echo "Preview URL: ${{ vars.PREVIEW_BASE_URL }}/pr-${{ github.event.pull_request.number }}/" >> "$GITHUB_STEP_SUMMARY"
