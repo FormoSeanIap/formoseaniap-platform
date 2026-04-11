@@ -17,15 +17,18 @@ Current production stack:
 - Creates a private S3 bucket for the static site origin.
 - Blocks all public S3 access and enables bucket-owner-enforced ownership, SSE-S3 encryption, and versioning.
 - Creates a CloudFront distribution with Origin Access Control for the private S3 origin.
-- Defaults CloudFront pay-as-you-go traffic to `PriceClass_100` to minimize cost until Terraform supports CloudFront flat-rate plans.
+- Leaves CloudFront `price_class` unset while the distribution is on a console-managed flat-rate plan, because Free/Pro plans do not allow the price class feature on distribution updates.
 - Uses AWS-managed CloudFront cache policies only: `CachingOptimized` for the static site and `CachingDisabled` for `/podcasts/*`, so the distribution avoids Business-only custom caching rules and stays eligible for later Free/Pro flat-rate plan changes in the AWS console.
 - Routes `/podcasts/*` through the same CloudFront distribution to the SoundOn RSS origin `feeds.soundon.fm`.
 - Uses the default CloudFront certificate until a custom domain is purchased and added later.
+- Ignores CloudFront `web_acl_id` drift in Terraform because flat-rate plan subscriptions can auto-create and require a console-managed WAF web ACL.
 - Does not provision the old Lambda Function URL podcast proxy. The local Python proxy remains available for localhost preview only.
 
 Operational caveat:
 
 - If you manually subscribe the CloudFront distribution to a flat-rate plan in the AWS console, Terraform cannot currently manage or cancel that subscription.
+- When the distribution is on a flat-rate plan, leave `cloudfront_price_class = null`. If you later move back to pay-as-you-go, set a value such as `PriceClass_100` explicitly.
+- Flat-rate plan subscriptions can also auto-attach a required WAF web ACL. Terraform currently leaves that association alone instead of trying to import or replace the console-managed web ACL.
 - `terraform destroy` may fail to delete the distribution until you manually unsubscribe it in the console and wait for the cancellation to take effect at the end of the current billing cycle.
 
 Remote backend:
