@@ -5,8 +5,9 @@ variable "aws_region" {
 }
 
 variable "cloudfront_price_class" {
-  default     = "PriceClass_100"
-  description = "CloudFront edge location price class. Defaults to the lowest-cost tier while flat-rate plans are not Terraform-managed."
+  default     = null
+  description = "Optional CloudFront edge location price class for pay-as-you-go distributions. Leave null when the distribution is on a console-managed flat-rate plan."
+  nullable    = true
   type        = string
 }
 
