@@ -10,7 +10,12 @@ on:
       aws_region:
         description: AWS region for the smoke test
         required: true
-        default: ap-east-2
+        default: ap-northeast-1
+        type: string
+      github_environment:
+        description: GitHub environment used by the IAM role trust policy
+        required: true
+        default: prod
         type: string
 
 permissions:
@@ -20,6 +25,7 @@ permissions:
 jobs:
   sts:
     runs-on: ubuntu-latest
+    environment: ${{ inputs.github_environment }}
     steps:
       - name: Configure AWS credentials from GitHub OIDC
         uses: aws-actions/configure-aws-credentials@v5.1.1

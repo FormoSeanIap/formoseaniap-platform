@@ -205,7 +205,7 @@
 
   const buildFeedRequestUrl = (show, proxyUrl) => {
     if (!proxyUrl) {
-      return show.feed_url;
+      return show.feed_proxy_path || show.feed_url;
     }
 
     const url = new URL(proxyUrl);
@@ -468,8 +468,10 @@
   };
 
   const loadShowEpisodes = async (show, proxyUrl) => {
-    const directFeedUrl = collapseWhitespace(show.feed_url || "");
-    if (!directFeedUrl) {
+    const upstreamFeedUrl = collapseWhitespace(show.feed_url || "");
+    const siteFeedPath = collapseWhitespace(show.feed_proxy_path || "");
+    const requestFeedUrl = proxyUrl ? upstreamFeedUrl : siteFeedPath || upstreamFeedUrl;
+    if (!requestFeedUrl) {
       return {
         show,
         coverImage: collapseWhitespace(show.cover_image || ""),
@@ -484,9 +486,11 @@
       return parseShowFeed(xmlText, show);
     } catch (err) {
       const fallbackError =
-        proxyUrl || !directFeedUrl
+        proxyUrl
           ? "The podcast proxy could not read this feed right now."
-          : "Direct browser feed loading failed. This usually means the upstream feed is blocked by CORS and needs the podcast proxy.";
+          : siteFeedPath
+            ? "The podcast feed route could not read this feed right now."
+            : "Direct browser feed loading failed. This usually means the upstream feed is blocked by CORS and needs the podcast proxy.";
       return {
         show,
         coverImage: collapseWhitespace(show.cover_image || ""),
@@ -678,6 +682,7 @@
         id: collapseWhitespace(show.id || show.title || "podcast-show"),
         title: collapseWhitespace(show.title || show.id || "Podcast Show"),
         feed_url: collapseWhitespace(show.feed_url || ""),
+        feed_proxy_path: collapseWhitespace(show.feed_proxy_path || ""),
         description: collapseWhitespace(show.description || ""),
         cover_image: collapseWhitespace(show.cover_image || ""),
         order: show.order,
