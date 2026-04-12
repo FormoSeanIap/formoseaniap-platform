@@ -3,6 +3,10 @@ locals {
   analytics_api_name         = "${local.name_prefix}-analytics-api"
   analytics_admin_group_name = var.analytics_admin_group_name
   analytics_admin_path       = "/admin/analytics.html"
+  analytics_backend_source_files = {
+    for path in sort(fileset("${path.module}/../analytics_backend", "**/*.py")) :
+    path => path
+  }
   analytics_cognito_domain_name = (
     var.analytics_cognito_domain_prefix != ""
     ? var.analytics_cognito_domain_prefix
@@ -34,8 +38,16 @@ locals {
 
 data "archive_file" "analytics_backend" {
   type        = "zip"
-  source_dir  = "${path.module}/../analytics_backend"
   output_path = "${path.module}/build/analytics_backend.zip"
+
+  dynamic "source" {
+    for_each = local.analytics_backend_source_files
+
+    content {
+      content  = file("${path.module}/../analytics_backend/${source.value}")
+      filename = "analytics_backend/${source.value}"
+    }
+  }
 }
 
 resource "random_password" "analytics_visitor_hmac_secret" {
@@ -221,7 +233,32 @@ resource "aws_cognito_user_pool" "analytics" {
   }
 
   auto_verified_attributes = ["email"]
-  username_attributes      = ["email"]
+
+  schema {
+    attribute_data_type      = "String"
+    developer_only_attribute = false
+    mutable                  = true
+    name                     = "email"
+    required                 = true
+
+    string_attribute_constraints {
+      max_length = 2048
+      min_length = 0
+    }
+  }
+
+  schema {
+    attribute_data_type      = "String"
+    developer_only_attribute = false
+    mutable                  = true
+    name                     = "name"
+    required                 = true
+
+    string_attribute_constraints {
+      max_length = 2048
+      min_length = 1
+    }
+  }
 
   password_policy {
     minimum_length    = 14
@@ -233,6 +270,10 @@ resource "aws_cognito_user_pool" "analytics" {
 
   verification_message_template {
     default_email_option = "CONFIRM_WITH_CODE"
+  }
+
+  username_configuration {
+    case_sensitive = false
   }
 
   tags = local.tags
@@ -252,6 +293,7 @@ resource "aws_cognito_user_pool_client" "analytics" {
   logout_urls                          = ["${local.analytics_public_site_base_url}${local.analytics_admin_path}"]
   name                                 = "${local.name_prefix}-analytics-spa"
   prevent_user_existence_errors        = "ENABLED"
+  read_attributes                      = ["email", "email_verified", "name"]
   supported_identity_providers         = ["COGNITO"]
   user_pool_id                         = aws_cognito_user_pool.analytics.id
 }
