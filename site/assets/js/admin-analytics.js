@@ -224,13 +224,22 @@
     }
   };
 
+  const setHeaderState = ({ label = "", showLabel = false, showSignOut = false }) => {
+    els.signedInMeta.hidden = !showLabel;
+    els.signedInMeta.textContent = showLabel ? label : "";
+    els.signOutButton.hidden = !showSignOut;
+  };
+
   const setAuthState = ({ title, message, actions = "" }) => {
     state.signedIn = false;
     els.dashboard.hidden = true;
     els.dashboard.setAttribute("aria-busy", "false");
     els.authPanel.hidden = false;
-    els.signOutButton.hidden = true;
-    els.signedInMeta.textContent = isMockModeEnabled() ? "Local mock mode" : "Signed out";
+    setHeaderState({
+      label: "",
+      showLabel: false,
+      showSignOut: false
+    });
     els.authSummary.innerHTML = `
       <h2>${escapeHtml(title)}</h2>
       <p>${escapeHtml(message)}</p>
@@ -294,8 +303,11 @@
     state.signedIn = true;
     els.authPanel.hidden = true;
     els.dashboard.hidden = false;
-    els.signOutButton.hidden = false;
-    els.signedInMeta.textContent = formatSignedInMeta(resolveSignedInLabel());
+    setHeaderState({
+      label: formatSignedInMeta(resolveSignedInLabel()),
+      showLabel: true,
+      showSignOut: true
+    });
   };
 
   const createDashboardError = (
@@ -825,7 +837,7 @@
     sessionStorage.removeItem(STORAGE_KEYS.pkceState);
     sessionStorage.removeItem(STORAGE_KEYS.pkceVerifier);
     const cleanUrl = `${window.location.origin}${window.location.pathname}`;
-    window.history.replaceState({}, "", cleanUrl);
+    window.location.replace(cleanUrl);
   };
 
   const signOut = () => {
@@ -1339,7 +1351,11 @@
         return;
       }
 
-      const completedSignIn = await processCallbackIfNeeded();
+      const redirectedAfterSignIn = await processCallbackIfNeeded();
+      if (redirectedAfterSignIn) {
+        return;
+      }
+
       const token = getStoredToken();
       if (!token) {
         setAuthState({
@@ -1350,7 +1366,7 @@
         return;
       }
 
-      await refreshDashboard({ showLoadingState: completedSignIn });
+      await refreshDashboard({ showLoadingState: true });
     } catch (error) {
       presentDashboardError(error, {
         fallbackMessage: "Failed to initialize the analytics dashboard.",
