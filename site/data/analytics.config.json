@@ -1,0 +1,22 @@
+{
+  "admin": {
+    "enabled": false,
+    "site_base_url": ""
+  },
+  "api_base_path": "/analytics-api",
+  "cognito": {
+    "client_id": "",
+    "domain_url": "",
+    "redirect_path": "/admin/analytics.html",
+    "scopes": [
+      "openid",
+      "email",
+      "profile"
+    ],
+    "user_pool_id": ""
+  },
+  "mock": {
+    "enabled": true,
+    "username": "local-admin"
+  }
+}
