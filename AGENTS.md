@@ -6,6 +6,13 @@
 - If no `README.md` update is needed, say that explicitly in the final response.
 - Only update `content/articles/README.md` when the article-writing workflow or article structure changes.
 
+## Terraform Hygiene
+
+- For changes under `infra/**` or `.terraform.lock.hcl`, verify touched Terraform resources, arguments, and blocks against current provider or module documentation before editing.
+- Prefer Terraform MCP for current provider or module docs; if the docs are ambiguous, inspect the initialized provider schema locally before changing Terraform syntax.
+- After Terraform edits, run `python3 scripts/terraform_validate_strict.py`.
+- Treat Terraform deprecation warnings as blocking. Do not leave deprecated settings in the repo even if plain `terraform validate` still exits successfully.
+
 ## Todo Capture
 
 - Use `docs/inbox.md` for quick idea capture when the user explicitly asks to add a todo.

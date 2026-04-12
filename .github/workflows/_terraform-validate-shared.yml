@@ -75,10 +75,6 @@ jobs:
     needs: detect_terraform_changes
     if: ${{ needs.detect_terraform_changes.outputs.has_tf_changes == 'true' && needs.detect_terraform_changes.outputs.has_tf_root == 'true' }}
     runs-on: ubuntu-latest
-    defaults:
-      run:
-        shell: bash
-        working-directory: infra
 
     steps:
       - name: Check out repository
@@ -89,11 +85,11 @@ jobs:
         with:
           terraform_wrapper: false
 
-      - name: Terraform fmt
-        run: terraform fmt -check -recursive
+      - name: Set up Python
+        uses: actions/setup-python@v6
+        with:
+          python-version: "3.x"
 
-      - name: Terraform init for validate
-        run: terraform init -backend=false -input=false
-
-      - name: Terraform validate
-        run: terraform validate -no-color
+      - name: Strict Terraform validation
+        shell: bash
+        run: python3 scripts/terraform_validate_strict.py

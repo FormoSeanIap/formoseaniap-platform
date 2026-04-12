@@ -35,6 +35,7 @@ __pycache__/
 *.tfstate
 *.tfstate.*
 infra/build/
+infra/.terraform-validate-local/
 
 # OS/editor artifacts
 .DS_Store
