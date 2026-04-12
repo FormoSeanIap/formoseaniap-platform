@@ -10,6 +10,11 @@
   align-items: center;
 }
 
+.analytics-admin-actions [hidden],
+#analytics-auth-panel[hidden] {
+  display: none !important;
+}
+
 .analytics-inline-action {
   appearance: none;
   background: transparent;
