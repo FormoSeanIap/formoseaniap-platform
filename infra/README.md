@@ -27,7 +27,7 @@ Current production stack:
 - Creates a private analytics backend made of:
   - Lambda collector/admin handlers
   - DynamoDB daily counters + daily uniqueness tables
-  - Cognito User Pool, App Client, Hosted UI domain, and `analytics-admin` group
+  - Cognito User Pool, App Client, hosted-login domain, and `analytics-admin` group for username-based admin login
 - Uses the default CloudFront certificate until a custom domain is purchased and added later.
 - Ignores CloudFront `web_acl_id` drift in Terraform because flat-rate plan subscriptions can auto-create and require a console-managed WAF web ACL.
 - Does not provision the old Lambda Function URL podcast proxy. The local Python proxy remains available for localhost preview only.
@@ -65,6 +65,8 @@ Analytics auth notes:
 
 - Set `public_site_base_url` if you want Cognito callback/logout URLs to use a custom production hostname; otherwise Terraform defaults to the CloudFront distribution domain.
 - Terraform provisions the user pool, app client, domain, and admin group, but does not create the first admin user.
-- After apply, manually create the admin user and add it to the `analytics-admin` Cognito group before testing `/admin/analytics.html`.
+- The analytics admin flow still uses the Cognito-hosted domain on the default CloudFront hostname for now; the future custom-domain move is tracked in `docs/inbox.md`.
+- After apply, manually create the admin user with `username`, `name`, and `email`, then add that user to the `analytics-admin` Cognito group before testing `/admin/analytics.html`.
+- Rebuilding the analytics user pool is a direct cutover: existing admin sessions become invalid and the admin user must be bootstrapped again in the replacement pool.
 
 If you later split infrastructure into multiple stacks or modules, update the Terraform workflows to target each stack explicitly instead of scattering `.tf` files across the repository.
