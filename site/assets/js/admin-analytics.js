@@ -1360,7 +1360,7 @@
       if (!token) {
         setAuthState({
           title: "Private analytics",
-          message: "Sign in with your Cognito admin username to access site and article analytics.",
+          message: "Sign in with your private admin account to access site and article analytics.",
           actions: authActionMarkup("signin", "Sign in")
         });
         return;
