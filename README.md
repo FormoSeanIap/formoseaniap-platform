@@ -18,7 +18,7 @@ This platform introduces me as:
 - Writer
 - Creator
 
-## Current State (April 6, 2026)
+## Current State (April 12, 2026)
 
 Implemented:
 - Shared static pages and branding across Home / Projects / Podcasts / Articles / About.
@@ -41,6 +41,14 @@ Implemented:
   - CloudFront Origin Access Control for S3 reads
   - AWS-managed CloudFront cache policies only, so the distribution can later be moved to a Free/Pro flat-rate plan from the AWS console
   - CloudFront `/podcasts/*` behavior routed to the SoundOn RSS origin for same-origin browser fetches
+  - CloudFront `/analytics-api/*` behavior routed to an API Gateway HTTP API for same-origin analytics collection and admin reads
+  - Lambda-backed analytics collector/admin handlers with DynamoDB daily counters + uniqueness state
+  - Cognito User Pool hosted-login flow for the private analytics admin page
+- Private analytics admin surface:
+  - Dedicated `site/admin/analytics.html` page with a branded sign-in shell
+  - Production-only Cognito login with Authorization Code + PKCE
+  - Same-origin browser analytics events for public page loads and article detail reads
+  - Deploy-time runtime config written to `site/data/analytics.config.json` from Terraform outputs
 - Python-based article build pipeline:
   - Markdown source in `content/articles/**`
   - Metadata index JSON
@@ -67,8 +75,10 @@ Implemented:
 Static-first runtime:
 - S3 stores HTML/CSS/JS/JSON/XML files in a private bucket.
 - CloudFront is the public entrypoint and reads S3 through Origin Access Control.
-- No application backend or runtime database is used for core site pages.
+- Core public pages remain static-first with no application backend for content rendering.
+- A same-origin analytics backend is available only for private admin reads and public write-only event collection.
 - `podcasts.html` reads configured public RSS feeds through same-origin `feed_proxy_path` routes, or through the local/Lambda-compatible proxy when `proxy_url` is configured, so newly published episodes can appear after refresh without rebuilding the repo.
+- Public pages send client-side analytics events to `/analytics-api/collect` after successful render; the private dashboard reads aggregated data from `/analytics-api/admin/*`.
 
 Build-time flow:
 1. Author Markdown in `content/articles/**`
@@ -95,6 +105,7 @@ Build-time flow:
   - config.toml                 repo-local Codex sandbox/approval defaults
   - skills/
     - static-site-ui-review/     repo-local Codex skill for frontend UI review
+    - terraform-hygiene/         repo-local Codex skill for Terraform doc lookup and deprecation-safe validation
 - content/
   - articles/
   - tags.json
@@ -111,23 +122,38 @@ Build-time flow:
   - backlog.md              curated implementation backlog
 - infra/
   - README.md                  Terraform home and workflow convention
+  - analytics.tf               analytics API, Cognito, Lambda, and DynamoDB resources
+  - analytics_outputs.tf       analytics runtime outputs consumed by production deploy
+  - analytics_variables.tf     analytics-related Terraform variables
   - backend.tf                 S3 remote backend config
   - main.tf                    private S3 + CloudFront OAC production site stack
   - variables.tf               production infrastructure variables
   - outputs.tf                 site bucket and CloudFront outputs
+- analytics_backend/
+  - collector.py               analytics event validation + DynamoDB write logic
+  - admin.py                   analytics range aggregation + admin API responses
+  - collector_lambda.py        Lambda entrypoint for public collector writes
+  - admin_lambda.py            Lambda entrypoint for private admin reads
 - scripts/
   - audit_versions.py         offline + optional network version audit for repo tooling
   - build_articles.py
   - dedupe_bilingual_images.py
   - podcast_proxy.py          local + Lambda-compatible podcast RSS proxy
+  - terraform_validate_strict.py strict Terraform fmt/init/validate wrapper that fails on deprecations
 - site/
   - assets/
+    - css/admin.css          analytics admin page styles
     - css/podcasts.css       podcast-specific page styling
+    - js/admin-analytics.js  Cognito login flow + private analytics dashboard UI
+    - js/analytics.js        client-side page/article analytics event emitter
     - js/podcasts.js         runtime RSS loading + podcast rendering for `podcasts.html`
   - data/                    generated article JSON + podcast runtime config
+    - analytics.config.json  tracked placeholder; production deploy writes live runtime values
     - articles.search.json   lazy-loaded article search index
     - projects.json          project case-study data
     - podcasts.shows.json    upstream podcast feeds, same-origin feed paths, and platform links
+  - admin/
+    - analytics.html         private analytics admin page shell
   - articles.html            list/filter page
   - article.html             detail page
   - podcasts.html            runtime-loaded podcast landing page
@@ -143,6 +169,8 @@ Build-time flow:
 
 - `./.codex/skills/static-site-ui-review` provides a repo-specific frontend review workflow for this static site.
 - Use it when reviewing or finalizing changes to `site/*.html`, `site/assets/css/**`, `site/assets/js/**`, or article list/detail rendering behavior.
+- `./.codex/skills/terraform-hygiene` provides a repo-specific Terraform workflow for current-doc lookup, provider-schema fallback, and strict deprecation-free validation.
+- Use it when reviewing or changing `infra/*.tf`, `infra/.terraform.lock.hcl`, or shared Terraform validation workflows.
 
 ## Repo-Local Codex Config
 
@@ -174,8 +202,16 @@ Build-time flow:
 - `./.github/workflows/push-others.yml` runs unit tests, rebuilds generated site artifacts, fails on generated-artifact drift, and adds push-safe Terraform validation when Terraform-related files changed on `feature/*`, `fix/*`, `chore/*`, `docs/*`, `hotfix/*`, and `develop`.
 - `./.github/workflows/pr-validate.yml` runs unit tests, rebuilds generated site artifacts, fails if generated outputs are out of date, uploads a preview artifact, performs shared Terraform validation plus an optional OIDC-backed Terraform plan when infra files changed, and only proceeds to preview status/deploy after the Terraform PR checks are complete.
 - `./.github/workflows/push-main.yml` re-runs the same validation path on `main`, can publish a pre-promotion Terraform plan artifact when the read-only plan role is configured, and waits at the protected `prod` environment before always running Terraform plan/apply against the production state, reading production outputs from remote state, and deploying the generated `site/` output.
+- On successful production promotion, `Push Main` also writes the live analytics runtime config JSON into the built site artifact before syncing to S3 so the admin page gets the current Cognito/client settings without hard-coding them in the repo.
 - `./.github/workflows/version-audit.yml` runs a weekly and manually triggered version audit for Python, Terraform, and tracked GitHub Actions, writing a summary plus a JSON artifact.
 - `./.github/dependabot.yml` opens weekly update PRs for Terraform and GitHub Actions dependency drift.
+- Shared Terraform CI runs `python3 scripts/terraform_validate_strict.py`, which fails on Terraform errors and deprecation diagnostics. Terraform MCP is used for current-doc lookup, but the CI gate is the actual enforcement layer.
+
+## Terraform Validation
+
+- Run `python3 scripts/terraform_validate_strict.py` from the repo root for the local Terraform validation path used by CI.
+- The strict validator runs `terraform fmt -check -recursive`, backendless `terraform init -backend=false -reconfigure -input=false`, and `terraform validate -json` against `infra/`.
+- The command fails on Terraform errors and on deprecation warnings, while leaving unrelated non-deprecation warnings advisory unless Terraform itself exits nonzero.
 
 ## Planning Workflow
 
@@ -320,19 +356,23 @@ Generated outputs:
 - `site/rss.xml`
 - `site/zh/rss.xml`
 
+Tracked runtime placeholders:
+- `site/data/analytics.config.json` is committed as a disabled placeholder for local work and PR previews.
+- The production deploy workflow overwrites that file in the built artifact with live Cognito + analytics config from Terraform outputs before syncing to S3.
+
 Podcast runtime config:
 - `site/data/podcasts.shows.json` is source-of-truth for podcast show metadata, feed URLs, and platform links.
 - Podcast episodes are not built into generated artifacts; the browser loads configured feeds live through same-origin CloudFront feed routes at page load in production.
 
 ## Local Preview
 
-Use any static server that serves the `site/` directory.
+Use the dedicated preview server so the local web root matches production and `/admin/analytics.html` works directly:
 
-Example:
 ```bash
-cd site
-python3 -m http.server 5500
+python3 scripts/site_preview.py
 ```
+
+If port `5500` is already in use, the preview server now probes the next free port and prints the exact URL to open.
 
 For podcast preview on localhost, run the local proxy in a second terminal from the repo root:
 
@@ -348,6 +388,13 @@ Then open:
 - `http://127.0.0.1:5500/articles.html?series=<series_id>&lang=en&lang=zh`
 - `http://127.0.0.1:5500/podcasts.html`
 - `http://127.0.0.1:5500/projects.html`
+- `http://127.0.0.1:5500/admin/analytics.html`
+
+Analytics admin local behavior:
+- The preview server serves `site/` as `/`, so `http://127.0.0.1:5500/admin/analytics.html` works locally without rewriting paths.
+- On `127.0.0.1` or `localhost`, the committed `site/data/analytics.config.json` enables a mock dashboard mode.
+- Mock mode uses generated article/site analytics data and a local preview sign-in button instead of Cognito, API Gateway, Lambda, or DynamoDB.
+- Production deploy still overwrites `site/data/analytics.config.json` in the built artifact with the real Cognito + analytics runtime values.
 
 ## Podcast Runtime Config
 
@@ -463,8 +510,13 @@ Important:
 - The Terraform root currently targets the `hashicorp/aws` provider `~> 6.0`.
 - The `infra/` root uses S3 remote state in `formoseaniap-platform-tfstate-760259504838-ap-northeast-1-an` with native S3 lock files.
 - The production stack creates the private site bucket and CloudFront distribution; the production deploy workflow reads output `site_bucket_name` and output `cloudfront_distribution_id` from Terraform remote state at run time.
+- The production stack also creates the private analytics backend:
+  - API Gateway HTTP API
+  - Lambda collector/admin functions
+  - DynamoDB daily counter and uniqueness tables
+  - Cognito User Pool, App Client, Hosted UI domain, and `analytics-admin` group
 - Terraform leaves CloudFront `price_class` unset while the distribution is on a console-managed flat-rate plan, because Free/Pro plans do not allow the price class feature on distribution updates.
-- The CloudFront distribution uses AWS-managed cache policies only: `CachingOptimized` for the static site and `CachingDisabled` for `/podcasts/*`, avoiding the Business-only custom caching rules that block Free/Pro flat-rate plan changes in the AWS console.
+- The CloudFront distribution uses AWS-managed cache policies only: `CachingOptimized` for the static site and `CachingDisabled` for `/podcasts/*` and `/analytics-api/*`, avoiding the Business-only custom caching rules that block Free/Pro flat-rate plan changes in the AWS console.
 - If a CloudFront flat-rate plan auto-attaches a required WAF web ACL, Terraform ignores `web_acl_id` drift on the distribution and leaves that console-managed association in place.
 - If you later move the distribution back to pay-as-you-go, set `cloudfront_price_class` explicitly to a value such as `PriceClass_100`.
 - If you manually enable a CloudFront flat-rate plan in the AWS console, Terraform cannot currently unsubscribe or destroy that distribution until the plan is canceled manually and the current billing cycle ends.
@@ -478,11 +530,13 @@ Resume AWS rollout from these steps:
 2. Create the IAM roles and policies from `docs/aws-oidc-github-actions.md`.
 3. Use `docs/examples/aws-oidc-trust-policy-plan-and-output.json` for the Terraform plan role, because PRs and main-branch pre-promotion plans still use a read-only role.
 4. Set GitHub repository variables: `AWS_REGION`, `AWS_TERRAFORM_PLAN_ROLE_ARN`, `AWS_TERRAFORM_APPLY_ROLE_ARN`, and `AWS_PROD_ROLE_ARN`.
-5. Run `AWS OIDC Smoke` against a `prod` environment-scoped role.
-6. Merge or push the release to `main`.
-7. Review the optional Terraform plan artifact from `Push Main` when it is available, then approve the protected `prod` environment.
-8. Let the gated `Push Main` workflow always run Terraform plan/apply against the production stack and deploy the generated site; it reads `site_bucket_name` and `cloudfront_distribution_id` from Terraform remote state, so `PROD_S3_BUCKET` and `PROD_CLOUDFRONT_DISTRIBUTION_ID` variables are not required.
-9. Verify the CloudFront distribution serves the static site and that `podcasts.html` loads live episodes through same-origin `/podcasts/*.xml` feed paths.
+5. Set `public_site_base_url` for Terraform if you want Cognito callbacks to use a custom production hostname instead of the default CloudFront domain.
+6. After the production stack is applied, manually create the first Cognito user and add that user to the `analytics-admin` group.
+7. Run `AWS OIDC Smoke` against a `prod` environment-scoped role.
+8. Merge or push the release to `main`.
+9. Review the optional Terraform plan artifact from `Push Main` when it is available, then approve the protected `prod` environment.
+10. Let the gated `Push Main` workflow always run Terraform plan/apply against the production stack and deploy the generated site; it reads `site_bucket_name`, `cloudfront_distribution_id`, and analytics runtime config outputs from Terraform remote state, so separate production bucket/distribution variables are not required.
+11. Verify the CloudFront distribution serves the static site, that `podcasts.html` loads live episodes through same-origin `/podcasts/*.xml` feed paths, and that `/admin/analytics.html` can complete Cognito sign-in on the production site.
 
 ## Style Direction
 

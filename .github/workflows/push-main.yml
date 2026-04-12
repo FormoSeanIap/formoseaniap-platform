@@ -150,15 +150,17 @@ jobs:
 
           site_bucket_name="$(jq -r '.site_bucket_name.value // empty' tf_outputs.json)"
           cloudfront_distribution_id="$(jq -r '.cloudfront_distribution_id.value // empty' tf_outputs.json)"
+          analytics_runtime_config="$(jq -c '.analytics_runtime_config.value // empty' tf_outputs.json)"
 
-          if [ -z "${site_bucket_name}" ] || [ -z "${cloudfront_distribution_id}" ]; then
-            echo "Terraform state is missing required outputs: site_bucket_name and cloudfront_distribution_id." >&2
+          if [ -z "${site_bucket_name}" ] || [ -z "${cloudfront_distribution_id}" ] || [ -z "${analytics_runtime_config}" ]; then
+            echo "Terraform state is missing required outputs: site_bucket_name, cloudfront_distribution_id, and analytics_runtime_config." >&2
             echo "Confirm that the production state in infra/backend.tf is correct and that the main pipeline can apply the Terraform stack successfully." >&2
             exit 1
           fi
 
           echo "site_bucket_name=${site_bucket_name}" >> "$GITHUB_OUTPUT"
           echo "cloudfront_distribution_id=${cloudfront_distribution_id}" >> "$GITHUB_OUTPUT"
+          echo "analytics_runtime_config=${analytics_runtime_config}" >> "$GITHUB_OUTPUT"
           echo "- Production S3 bucket: \`${site_bucket_name}\`" >> "$GITHUB_STEP_SUMMARY"
           echo "- Production CloudFront distribution: \`${cloudfront_distribution_id}\`" >> "$GITHUB_STEP_SUMMARY"
 
@@ -168,6 +170,12 @@ jobs:
           aws-region: ${{ vars.AWS_REGION }}
           role-to-assume: ${{ vars.AWS_PROD_ROLE_ARN }}
           role-session-name: gha-site-prod-${{ github.run_id }}
+
+      - name: Write analytics runtime config
+        run: |
+          set -euo pipefail
+          mkdir -p prod-site/data
+          printf '%s\n' '${{ steps.tf_outputs.outputs.analytics_runtime_config }}' | jq '.' > prod-site/data/analytics.config.json
 
       - name: Sync site to S3
         run: aws s3 sync prod-site/ "s3://${{ steps.tf_outputs.outputs.site_bucket_name }}/" --delete
