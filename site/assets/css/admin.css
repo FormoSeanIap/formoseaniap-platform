@@ -24,6 +24,10 @@
   gap: var(--space-6);
 }
 
+.analytics-dashboard[aria-busy="true"] {
+  opacity: 0.98;
+}
+
 .analytics-dashboard[hidden] {
   display: none;
 }
@@ -70,6 +74,15 @@
 .analytics-metric-card {
   display: grid;
   gap: 0.5rem;
+}
+
+.analytics-loading-card {
+  align-content: start;
+  min-height: 9rem;
+}
+
+.analytics-loading-copy {
+  color: var(--text-soft);
 }
 
 .analytics-chart-card,

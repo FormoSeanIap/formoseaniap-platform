@@ -43,10 +43,11 @@ Implemented:
   - CloudFront `/podcasts/*` behavior routed to the SoundOn RSS origin for same-origin browser fetches
   - CloudFront `/analytics-api/*` behavior routed to an API Gateway HTTP API for same-origin analytics collection and admin reads
   - Lambda-backed analytics collector/admin handlers with DynamoDB daily counters + uniqueness state
-  - Cognito User Pool hosted-login flow for the private analytics admin page
+  - Cognito managed-login redirect flow for the private analytics admin page, with username-based sign-in and a separate full-name display attribute
 - Private analytics admin surface:
   - Dedicated `site/admin/analytics.html` page with a branded sign-in shell
-  - Production-only Cognito login with Authorization Code + PKCE
+  - Production-only Cognito managed-login redirect with Authorization Code + PKCE
+  - Admin users sign in with a Cognito `username`; the dashboard displays standard `name`, then falls back to `email`
   - Same-origin browser analytics events for public page loads and article detail reads
   - Deploy-time runtime config written to `site/data/analytics.config.json` from Terraform outputs
 - Python-based article build pipeline:
@@ -514,12 +515,13 @@ Important:
   - API Gateway HTTP API
   - Lambda collector/admin functions
   - DynamoDB daily counter and uniqueness tables
-  - Cognito User Pool, App Client, Hosted UI domain, and `analytics-admin` group
+  - Cognito User Pool, App Client, hosted-login domain, and `analytics-admin` group for username-based admin login
 - Terraform leaves CloudFront `price_class` unset while the distribution is on a console-managed flat-rate plan, because Free/Pro plans do not allow the price class feature on distribution updates.
 - The CloudFront distribution uses AWS-managed cache policies only: `CachingOptimized` for the static site and `CachingDisabled` for `/podcasts/*` and `/analytics-api/*`, avoiding the Business-only custom caching rules that block Free/Pro flat-rate plan changes in the AWS console.
 - If a CloudFront flat-rate plan auto-attaches a required WAF web ACL, Terraform ignores `web_acl_id` drift on the distribution and leaves that console-managed association in place.
 - If you later move the distribution back to pay-as-you-go, set `cloudfront_price_class` explicitly to a value such as `PriceClass_100`.
 - If you manually enable a CloudFront flat-rate plan in the AWS console, Terraform cannot currently unsubscribe or destroy that distribution until the plan is canceled manually and the current billing cycle ends.
+- The production auth flow still uses the Cognito-hosted domain on the default CloudFront hostname; moving auth onto a future custom domain is tracked in `docs/inbox.md`.
 - If infrastructure later splits into multiple stacks or modules, update the Terraform workflows to target each stack explicitly.
 
 ## AWS Deployment Next Steps
@@ -530,13 +532,14 @@ Resume AWS rollout from these steps:
 2. Create the IAM roles and policies from `docs/aws-oidc-github-actions.md`.
 3. Use `docs/examples/aws-oidc-trust-policy-plan-and-output.json` for the Terraform plan role, because PRs and main-branch pre-promotion plans still use a read-only role.
 4. Set GitHub repository variables: `AWS_REGION`, `AWS_TERRAFORM_PLAN_ROLE_ARN`, `AWS_TERRAFORM_APPLY_ROLE_ARN`, and `AWS_PROD_ROLE_ARN`.
-5. Set `public_site_base_url` for Terraform if you want Cognito callbacks to use a custom production hostname instead of the default CloudFront domain.
-6. After the production stack is applied, manually create the first Cognito user and add that user to the `analytics-admin` group.
-7. Run `AWS OIDC Smoke` against a `prod` environment-scoped role.
-8. Merge or push the release to `main`.
-9. Review the optional Terraform plan artifact from `Push Main` when it is available, then approve the protected `prod` environment.
-10. Let the gated `Push Main` workflow always run Terraform plan/apply against the production stack and deploy the generated site; it reads `site_bucket_name`, `cloudfront_distribution_id`, and analytics runtime config outputs from Terraform remote state, so separate production bucket/distribution variables are not required.
-11. Verify the CloudFront distribution serves the static site, that `podcasts.html` loads live episodes through same-origin `/podcasts/*.xml` feed paths, and that `/admin/analytics.html` can complete Cognito sign-in on the production site.
+5. Set `public_site_base_url` for Terraform if you want Cognito callbacks to use a custom production hostname instead of the default CloudFront domain; this is optional until the custom domain is ready.
+6. After the production stack is applied, manually create the first Cognito admin user with `username`, `name`, and `email`, then add that user to the `analytics-admin` group.
+7. Expect a direct auth cutover whenever the analytics user pool is rebuilt: old admin sessions become invalid and existing hosted-login state must be recreated.
+8. Run `AWS OIDC Smoke` against a `prod` environment-scoped role.
+9. Merge or push the release to `main`.
+10. Review the optional Terraform plan artifact from `Push Main` when it is available, then approve the protected `prod` environment.
+11. Let the gated `Push Main` workflow always run Terraform plan/apply against the production stack and deploy the generated site; it reads `site_bucket_name`, `cloudfront_distribution_id`, and analytics runtime config outputs from Terraform remote state, so separate production bucket/distribution variables are not required.
+12. Verify the CloudFront distribution serves the static site, that `podcasts.html` loads live episodes through same-origin `/podcasts/*.xml` feed paths, and that `/admin/analytics.html` can complete Cognito username-based sign-in on the production site.
 
 ## Style Direction
 
