@@ -19,6 +19,10 @@ runs:
       with:
         python-version: "3.14"
 
+    - name: Install test dependencies
+      shell: bash
+      run: pip install boto3
+
     - name: Run unit tests
       shell: bash
       run: python3 -m unittest discover -s tests -p 'test_*.py'

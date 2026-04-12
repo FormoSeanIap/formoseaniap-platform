@@ -1,0 +1,166 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="description" content="Private analytics dashboard for the portfolio site." />
+    <title>Portfolio | Private Analytics</title>
+    <script>
+      (() => {
+        try {
+          const preference = localStorage.getItem("theme-preference");
+          if (preference === "light" || preference === "dark") {
+            document.documentElement.dataset.theme = preference;
+          }
+        } catch (error) {}
+      })();
+    </script>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;700&family=Noto+Sans+JP:wght@400;500&family=Noto+Serif+JP:wght@500;700&display=swap"
+      rel="stylesheet"
+    />
+    <link rel="stylesheet" href="../assets/css/variables.css" />
+    <link rel="stylesheet" href="../assets/css/base.css" />
+    <link rel="stylesheet" href="../assets/css/layout.css" />
+    <link rel="stylesheet" href="../assets/css/components.css" />
+    <link rel="stylesheet" href="../assets/css/admin.css" />
+  </head>
+  <body data-page="analytics-admin">
+    <header class="site-header">
+      <div class="site-shell header-row">
+        <a class="brand" href="../index.html">
+          <strong>Sêng-Gān Ia̍p</strong>
+          <span>Platform Engineer / Writer / Creator</span>
+        </a>
+        <div class="header-actions">
+          <nav class="site-nav" aria-label="Main navigation">
+            <ul>
+              <li><a class="nav-link" href="../index.html">Home</a></li>
+              <li><a class="nav-link" href="../projects.html">Projects</a></li>
+              <li><a class="nav-link" href="../podcasts.html">Podcasts</a></li>
+              <li><a class="nav-link" href="../articles.html">Articles</a></li>
+              <li><a class="nav-link" href="../about.html">About</a></li>
+            </ul>
+          </nav>
+          <div class="theme-switcher" role="group" aria-label="Color theme">
+            <span class="theme-switch-label">Theme</span>
+            <div class="theme-switch-options">
+              <button class="theme-option" type="button" data-theme-option="system" aria-pressed="false">Auto</button>
+              <button class="theme-option" type="button" data-theme-option="light" aria-pressed="false">Light</button>
+              <button class="theme-option" type="button" data-theme-option="dark" aria-pressed="false">Dark</button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </header>
+
+    <main class="site-shell" data-analytics-admin>
+      <section class="section">
+        <div class="hero-copy analytics-admin-hero" data-reveal>
+          <p class="kicker">Private Analytics</p>
+          <h1>Traffic, article views, and daily unique visitors.</h1>
+          <p class="lead">
+            In production this dashboard reads same-origin analytics data from the AWS-native backend. On localhost it can render a mock preview without AWS dependencies.
+          </p>
+          <div class="analytics-admin-actions">
+            <p class="meta" id="analytics-signed-in-meta">Signed out</p>
+            <button class="button-link analytics-inline-action" id="analytics-sign-out" type="button" hidden>Sign out</button>
+          </div>
+        </div>
+      </section>
+
+      <section class="section">
+        <div class="card" id="analytics-auth-panel" data-reveal data-delay="30">
+          <div id="analytics-auth-summary">
+            <h2>Private analytics</h2>
+            <p>Sign in to load the private dashboard.</p>
+          </div>
+          <div class="analytics-admin-actions" id="analytics-auth-actions"></div>
+        </div>
+      </section>
+
+      <section class="section analytics-dashboard" id="analytics-dashboard" hidden>
+        <section class="card analytics-filter-bar" data-reveal data-delay="50">
+          <div>
+            <p class="kicker">Date Range</p>
+            <h2>Choose the reporting window.</h2>
+          </div>
+          <div class="analytics-filter-controls">
+            <button class="tag filter-chip filter-chip-button" type="button" data-range-preset="7d" aria-pressed="false">7d</button>
+            <button class="tag filter-chip filter-chip-button" type="button" data-range-preset="30d" aria-pressed="false">30d</button>
+            <button class="tag filter-chip filter-chip-button" type="button" data-range-preset="90d" aria-pressed="false">90d</button>
+            <button class="tag filter-chip filter-chip-button" type="button" data-range-preset="365d" aria-pressed="false">365d</button>
+          </div>
+          <form class="analytics-date-fields" id="analytics-range-form">
+            <label class="analytics-date-field" for="analytics-range-start">
+              <span class="meta">From</span>
+              <input id="analytics-range-start" type="date" name="from" required />
+            </label>
+            <label class="analytics-date-field" for="analytics-range-end">
+              <span class="meta">To</span>
+              <input id="analytics-range-end" type="date" name="to" required />
+            </label>
+            <button class="button-link analytics-inline-action" type="submit">Refresh</button>
+          </form>
+        </section>
+
+        <section class="analytics-metric-grid" id="analytics-summary-cards"></section>
+
+        <section class="card analytics-chart-card" data-reveal data-delay="90">
+          <div>
+            <p class="kicker">Trend</p>
+            <h2>Daily site views.</h2>
+            <p class="meta" id="analytics-trend-caption"></p>
+          </div>
+          <div id="analytics-trend-chart"></div>
+        </section>
+
+        <section class="card analytics-table-card" data-reveal data-delay="120">
+          <div class="section-head">
+            <div>
+              <p class="kicker">Top Articles</p>
+              <h2>Most-read writing in the selected range.</h2>
+            </div>
+            <div class="analytics-filter-controls" role="group" aria-label="Article grouping">
+              <button class="tag filter-chip filter-chip-button is-active" type="button" data-articles-group="combined" aria-pressed="true">Combined</button>
+              <button class="tag filter-chip filter-chip-button" type="button" data-articles-group="variant" aria-pressed="false">Variant</button>
+            </div>
+          </div>
+          <p class="meta" id="analytics-top-articles-meta"></p>
+          <div id="analytics-top-articles"></div>
+        </section>
+
+        <section class="analytics-grid-2">
+          <section class="card analytics-search-panel" data-reveal data-delay="150">
+            <div>
+              <p class="kicker">Article Explorer</p>
+              <h2>Search and inspect a specific article.</h2>
+            </div>
+            <label class="visually-hidden" for="analytics-article-search">Search articles</label>
+            <input id="analytics-article-search" type="search" placeholder="Search by article title" autocomplete="off" />
+            <div class="analytics-search-results" id="analytics-article-search-results"></div>
+          </section>
+
+          <section class="card analytics-detail-card" data-reveal data-delay="180">
+            <div>
+              <p class="kicker">Drilldown</p>
+              <h2>Language split and daily trend.</h2>
+            </div>
+            <div id="analytics-article-detail-meta"></div>
+            <div id="analytics-article-detail-chart"></div>
+          </section>
+        </section>
+      </section>
+    </main>
+
+    <footer class="site-shell footer">
+      <p>Copyright <span data-year></span> Sêng-Gān Ia̍p</p>
+      <p>Private analytics remain visible only to the signed-in admin.</p>
+    </footer>
+
+    <script src="../assets/js/main.js"></script>
+    <script src="../assets/js/admin-analytics.js"></script>
+  </body>
+</html>

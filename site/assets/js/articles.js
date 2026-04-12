@@ -1299,6 +1299,10 @@
       endLinksNode.innerHTML = buildDetailActionLinks(copy, article, lang, { includeBackToTop: true }).join("");
 
       bodyNode.innerHTML = article.body_html || `<p>${escapeHtml(copy.notFound)}</p>`;
+      window.SiteAnalytics?.trackArticleView({
+        articleId: article.id || id,
+        lang
+      });
       tagsNode.innerHTML = (article.tags || [])
         .map((tag) => {
           const href = buildPageUrl({

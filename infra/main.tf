@@ -2,9 +2,17 @@ terraform {
   required_version = ">= 1.10.0"
 
   required_providers {
+    archive = {
+      source  = "hashicorp/archive"
+      version = "~> 2.6"
+    }
     aws = {
       source  = "hashicorp/aws"
       version = "~> 6.0"
+    }
+    random = {
+      source  = "hashicorp/random"
+      version = "~> 3.7"
     }
   }
 }
@@ -112,6 +120,18 @@ resource "aws_cloudfront_distribution" "site" {
     }
   }
 
+  origin {
+    domain_name = replace(aws_apigatewayv2_api.analytics.api_endpoint, "https://", "")
+    origin_id   = local.analytics_api_origin_id
+
+    custom_origin_config {
+      http_port              = 80
+      https_port             = 443
+      origin_protocol_policy = "https-only"
+      origin_ssl_protocols   = ["TLSv1.2"]
+    }
+  }
+
   default_cache_behavior {
     allowed_methods        = ["GET", "HEAD"]
     cache_policy_id        = var.static_site_cache_policy_id
@@ -129,6 +149,17 @@ resource "aws_cloudfront_distribution" "site" {
     path_pattern           = var.podcast_feed_path_pattern
     target_origin_id       = local.soundon_origin_id
     viewer_protocol_policy = "redirect-to-https"
+  }
+
+  ordered_cache_behavior {
+    allowed_methods          = ["DELETE", "GET", "HEAD", "OPTIONS", "PATCH", "POST", "PUT"]
+    cache_policy_id          = var.analytics_api_cache_policy_id
+    cached_methods           = ["GET", "HEAD"]
+    compress                 = true
+    origin_request_policy_id = var.analytics_api_origin_request_policy_id
+    path_pattern             = var.analytics_api_path_pattern
+    target_origin_id         = local.analytics_api_origin_id
+    viewer_protocol_policy   = "redirect-to-https"
   }
 
   restrictions {
