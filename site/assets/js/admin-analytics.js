@@ -10,6 +10,7 @@
   const MOCK_PAGE_KEYS = ["home", "articles", "projects", "podcasts", "about", "artworks"];
   const STORAGE_KEYS = {
     accessToken: "analytics-admin-access-token",
+    idToken: "analytics-admin-id-token",
     expiresAt: "analytics-admin-access-token-expires-at",
     mockSession: "analytics-admin-mock-session",
     pkceState: "analytics-admin-pkce-state",
@@ -99,12 +100,14 @@
   const getStoredToken = () => {
     try {
       const accessToken = sessionStorage.getItem(STORAGE_KEYS.accessToken);
+      const idToken = sessionStorage.getItem(STORAGE_KEYS.idToken) || "";
       const expiresAt = Number(sessionStorage.getItem(STORAGE_KEYS.expiresAt) || "0");
       if (!accessToken || !expiresAt || Date.now() >= expiresAt) {
         return null;
       }
       return {
         accessToken,
+        idToken,
         expiresAt
       };
     } catch (error) {
@@ -112,15 +115,21 @@
     }
   };
 
-  const storeToken = ({ access_token: accessToken, expires_in: expiresIn }) => {
+  const storeToken = ({ access_token: accessToken, expires_in: expiresIn, id_token: idToken }) => {
     const expiresAt = Date.now() + Math.max(0, Number(expiresIn || 0) * 1000 - 5000);
     sessionStorage.setItem(STORAGE_KEYS.accessToken, accessToken);
+    if (idToken) {
+      sessionStorage.setItem(STORAGE_KEYS.idToken, idToken);
+    } else {
+      sessionStorage.removeItem(STORAGE_KEYS.idToken);
+    }
     sessionStorage.setItem(STORAGE_KEYS.expiresAt, String(expiresAt));
   };
 
   const clearToken = () => {
     try {
       sessionStorage.removeItem(STORAGE_KEYS.accessToken);
+      sessionStorage.removeItem(STORAGE_KEYS.idToken);
       sessionStorage.removeItem(STORAGE_KEYS.expiresAt);
       sessionStorage.removeItem(STORAGE_KEYS.pkceState);
       sessionStorage.removeItem(STORAGE_KEYS.pkceVerifier);
@@ -128,6 +137,17 @@
   };
 
   const getMockUsername = () => String(state.config?.mock?.username || "local-admin").trim() || "local-admin";
+  const toTitleCase = (value) =>
+    String(value || "")
+      .split(/[\s._-]+/)
+      .filter(Boolean)
+      .map((part) => part.charAt(0).toUpperCase() + part.slice(1))
+      .join(" ")
+      .trim();
+  const getMockDisplayName = () =>
+    String(state.config?.mock?.name || "").trim() || toTitleCase(getMockUsername()) || "Local Admin";
+  const getMockEmail = () =>
+    String(state.config?.mock?.email || "").trim() || "local-admin@example.test";
 
   const getMockSession = () => {
     if (!isMockModeEnabled()) {
@@ -144,6 +164,8 @@
         return null;
       }
       return {
+        email: String(parsed.email || getMockEmail()),
+        name: String(parsed.name || getMockDisplayName()),
         sub: String(parsed.sub || "local-mock-admin"),
         username: String(parsed.username || getMockUsername())
       };
@@ -156,6 +178,8 @@
     sessionStorage.setItem(
       STORAGE_KEYS.mockSession,
       JSON.stringify({
+        email: getMockEmail(),
+        name: getMockDisplayName(),
         sub: "local-mock-admin",
         username: getMockUsername()
       })
@@ -203,6 +227,7 @@
   const setAuthState = ({ title, message, actions = "" }) => {
     state.signedIn = false;
     els.dashboard.hidden = true;
+    els.dashboard.setAttribute("aria-busy", "false");
     els.authPanel.hidden = false;
     els.signOutButton.hidden = true;
     els.signedInMeta.textContent = isMockModeEnabled() ? "Local mock mode" : "Signed out";
@@ -213,22 +238,134 @@
     els.authActions.innerHTML = actions;
   };
 
-  const setSignedInShell = (username) => {
+  const decodeBase64Url = (value) => {
+    const normalized = String(value || "").replaceAll("-", "+").replaceAll("_", "/");
+    const padding = "=".repeat((4 - (normalized.length % 4)) % 4);
+    const binary = window.atob(`${normalized}${padding}`);
+    return Uint8Array.from(binary, (character) => character.charCodeAt(0));
+  };
+
+  const decodeJwtPayload = (token) => {
+    try {
+      const [, payload] = String(token || "").split(".");
+      if (!payload) {
+        return {};
+      }
+      const decoded = new TextDecoder().decode(decodeBase64Url(payload));
+      const claims = JSON.parse(decoded);
+      return claims && typeof claims === "object" ? claims : {};
+    } catch (error) {
+      return {};
+    }
+  };
+
+  const normalizeIdentityValue = (value) => {
+    const normalized = String(value || "").trim();
+    return normalized || "";
+  };
+
+  const resolveSignedInLabel = () => {
+    if (isMockModeEnabled()) {
+      const session = getMockSession();
+      return (
+        normalizeIdentityValue(session?.name) ||
+        normalizeIdentityValue(session?.email) ||
+        ""
+      );
+    }
+
+    const token = getStoredToken();
+    const claims = decodeJwtPayload(token?.idToken || "");
+    return (
+      normalizeIdentityValue(claims.name) ||
+      normalizeIdentityValue(claims.email) ||
+      ""
+    );
+  };
+
+  const formatSignedInMeta = (label) => {
+    if (isMockModeEnabled()) {
+      return label ? `Local mock mode as ${label}` : "Local mock mode";
+    }
+    return label ? `Signed in as ${label}` : "Signed in";
+  };
+
+  const setSignedInShell = () => {
     state.signedIn = true;
     els.authPanel.hidden = true;
     els.dashboard.hidden = false;
     els.signOutButton.hidden = false;
-    els.signedInMeta.textContent = isMockModeEnabled()
-      ? `Local mock mode as ${username || getMockUsername()}`
-      : username
-        ? `Signed in as ${username}`
-        : "Signed in";
+    els.signedInMeta.textContent = formatSignedInMeta(resolveSignedInLabel());
+  };
+
+  const createDashboardError = (
+    message,
+    {
+      action = null,
+      clearMockSession = false,
+      clearToken = false,
+      title = ""
+    } = {}
+  ) => {
+    const error = new Error(message);
+    error.analyticsAction = action;
+    error.analyticsClearMockSession = clearMockSession;
+    error.analyticsClearToken = clearToken;
+    error.analyticsTitle = title;
+    return error;
+  };
+
+  const defaultAuthActionMarkup = () =>
+    isMockModeEnabled()
+      ? authActionMarkup("mock-signin", "Open mock dashboard")
+      : state.config?.admin?.enabled && isConfigUsable()
+        ? authActionMarkup("signin", "Sign in again")
+        : "";
+
+  const resolveErrorActions = (error) => {
+    if (error && typeof error.analyticsAction === "string") {
+      if (error.analyticsAction === "mock-signin") {
+        return authActionMarkup("mock-signin", "Open mock dashboard");
+      }
+      if (error.analyticsAction === "signin" && state.config?.admin?.enabled && isConfigUsable()) {
+        return authActionMarkup("signin", "Sign in again");
+      }
+      return "";
+    }
+    return defaultAuthActionMarkup();
+  };
+
+  const presentDashboardError = (
+    error,
+    {
+      fallbackMessage = "Failed to load analytics.",
+      fallbackTitle = "Analytics unavailable",
+      mockFallbackTitle = "Mock analytics unavailable"
+    } = {}
+  ) => {
+    if (error?.analyticsClearToken) {
+      clearToken();
+    }
+    if (error?.analyticsClearMockSession) {
+      clearMockSession();
+    }
+    setAuthState({
+      title:
+        error?.analyticsTitle ||
+        (isMockModeEnabled() ? mockFallbackTitle : fallbackTitle),
+      message: error instanceof Error ? error.message : fallbackMessage,
+      actions: resolveErrorActions(error)
+    });
   };
 
   const getAuthHeaders = () => {
     const token = getStoredToken();
     if (!token) {
-      throw new Error("Authentication required.");
+      throw createDashboardError("Sign in to access the private analytics dashboard.", {
+        action: "signin",
+        clearToken: true,
+        title: "Sign-in required"
+      });
     }
     return {
       authorization: `Bearer ${token.accessToken}`
@@ -522,6 +659,8 @@
       authorized: true,
       groups: ["analytics-admin"],
       user: {
+        email: session.email,
+        name: session.name,
         sub: session.sub,
         username: session.username
       }
@@ -582,13 +721,39 @@
       headers: getAuthHeaders()
     });
 
-    if (response.status === 401 || response.status === 403) {
-      clearToken();
-      throw new Error("Authentication expired. Please sign in again.");
-    }
-
     if (!response.ok) {
-      throw new Error(`API request failed: HTTP ${response.status}`);
+      let apiMessage = "";
+      try {
+        const payload = await response.json();
+        apiMessage = String(payload?.error || payload?.message || "").trim();
+      } catch (error) {}
+
+      if (response.status === 401) {
+        throw createDashboardError("Your admin session expired. Please sign in again.", {
+          action: "signin",
+          clearToken: true,
+          title: "Session expired"
+        });
+      }
+
+      if (response.status === 403) {
+        const lacksAdminGroup =
+          apiMessage === "Authenticated user is not in the analytics admin group.";
+        throw createDashboardError(
+          lacksAdminGroup
+            ? "This account is signed in, but it does not have access to the private analytics dashboard. Add it to the analytics-admin Cognito group, then sign in again."
+            : apiMessage || "Access to the private analytics dashboard was denied.",
+          {
+            action: "signin",
+            clearToken: true,
+            title: "Access denied"
+          }
+        );
+      }
+
+      throw createDashboardError(apiMessage || `API request failed: HTTP ${response.status}`, {
+        title: "Analytics unavailable"
+      });
     }
 
     return response.json();
@@ -622,7 +787,11 @@
     const storedState = sessionStorage.getItem(STORAGE_KEYS.pkceState);
     const verifier = sessionStorage.getItem(STORAGE_KEYS.pkceVerifier);
     if (!storedState || !verifier || storedState !== returnedState) {
-      throw new Error("The sign-in callback state is invalid.");
+      throw createDashboardError("The sign-in callback could not be verified. Please start the login flow again.", {
+        action: "signin",
+        clearToken: true,
+        title: "Sign-in failed"
+      });
     }
 
     const redirectUri = `${state.config.admin.site_base_url}${state.config.cognito.redirect_path}`;
@@ -641,7 +810,14 @@
     });
 
     if (!response.ok) {
-      throw new Error(`Token exchange failed: HTTP ${response.status}`);
+      throw createDashboardError(
+        `The hosted sign-in flow completed, but the session token exchange failed with HTTP ${response.status}.`,
+        {
+          action: "signin",
+          clearToken: true,
+          title: "Sign-in failed"
+        }
+      );
     }
 
     const payload = await response.json();
@@ -751,6 +927,34 @@
         `
       )
       .join("");
+  };
+
+  const renderDashboardLoading = (message = "Loading analytics dashboard.") => {
+    const loadingCards = [
+      "Site views",
+      "Site unique visitors",
+      "Article views",
+      "Article unique visitors"
+    ];
+
+    els.dashboard.setAttribute("aria-busy", "true");
+    els.summaryCards.innerHTML = loadingCards
+      .map(
+        (label) => `
+          <article class="card analytics-metric-card analytics-loading-card">
+            <p class="meta">${escapeHtml(label)}</p>
+            <h3>Loading...</h3>
+            <p class="meta analytics-loading-copy">${escapeHtml(message)}</p>
+          </article>
+        `
+      )
+      .join("");
+    els.trendCaption.textContent = message;
+    els.trendChart.innerHTML = '<p class="meta analytics-loading-copy">Loading daily trend...</p>';
+    els.topArticlesMeta.textContent = message;
+    els.topArticlesTable.innerHTML = '<article class="card analytics-loading-card"><p class="meta analytics-loading-copy">Loading top articles...</p></article>';
+    els.articleDetailMeta.innerHTML = '<p class="meta analytics-loading-copy">Loading article drilldown...</p>';
+    els.articleDetailChart.innerHTML = "";
   };
 
   const renderLineChart = (container, rows, valueKey, emptyText) => {
@@ -931,27 +1135,37 @@
     return `from=${encodeURIComponent(range.start)}&to=${encodeURIComponent(range.end)}`;
   };
 
-  const refreshDashboard = async () => {
-    const query = getRangeQuery();
-    const [sessionPayload, overviewPayload, topArticlesPayload] = await Promise.all([
-      apiFetch("/analytics-api/admin/session"),
-      apiFetch(`/analytics-api/admin/overview?${query}`),
-      apiFetch(`/analytics-api/admin/articles?${query}&group=${encodeURIComponent(state.topArticlesGroup)}&limit=20`)
-    ]);
-
-    setSignedInShell(sessionPayload.user?.username || sessionPayload.user?.sub || "");
-    renderSummaryCards(overviewPayload.summary || {});
-    renderLineChart(els.trendChart, overviewPayload.daily || [], "site_views", "No site activity is available for this range yet.");
-    els.trendCaption.textContent = `Daily site views from ${overviewPayload.from} to ${overviewPayload.to}`;
-    renderTopArticles(topArticlesPayload);
-
-    const articleId = state.activeArticleId || topArticlesPayload.items?.[0]?.article_id;
-    if (articleId) {
-      const detailPayload = await apiFetch(`/analytics-api/admin/articles/${encodeURIComponent(articleId)}?${query}`);
-      renderArticleDetail(detailPayload);
+  const refreshDashboard = async ({ showLoadingState = false } = {}) => {
+    setSignedInShell();
+    if (showLoadingState) {
+      renderDashboardLoading("Loading analytics dashboard.");
     } else {
-      els.articleDetailMeta.innerHTML = '<p class="meta">Select an article to inspect its trend.</p>';
-      els.articleDetailChart.innerHTML = "";
+      els.dashboard.setAttribute("aria-busy", "true");
+    }
+
+    const query = getRangeQuery();
+    try {
+      const [, overviewPayload, topArticlesPayload] = await Promise.all([
+        apiFetch("/analytics-api/admin/session"),
+        apiFetch(`/analytics-api/admin/overview?${query}`),
+        apiFetch(`/analytics-api/admin/articles?${query}&group=${encodeURIComponent(state.topArticlesGroup)}&limit=20`)
+      ]);
+
+      renderSummaryCards(overviewPayload.summary || {});
+      renderLineChart(els.trendChart, overviewPayload.daily || [], "site_views", "No site activity is available for this range yet.");
+      els.trendCaption.textContent = `Daily site views from ${overviewPayload.from} to ${overviewPayload.to}`;
+      renderTopArticles(topArticlesPayload);
+
+      const articleId = state.activeArticleId || topArticlesPayload.items?.[0]?.article_id;
+      if (articleId) {
+        const detailPayload = await apiFetch(`/analytics-api/admin/articles/${encodeURIComponent(articleId)}?${query}`);
+        renderArticleDetail(detailPayload);
+      } else {
+        els.articleDetailMeta.innerHTML = '<p class="meta">Select an article to inspect its trend.</p>';
+        els.articleDetailChart.innerHTML = "";
+      }
+    } finally {
+      els.dashboard.setAttribute("aria-busy", "false");
     }
   };
 
@@ -986,9 +1200,10 @@
 
       storeMockSession();
       await refreshDashboard().catch((error) => {
-        setAuthState({
-          title: "Mock analytics unavailable",
-          message: error instanceof Error ? error.message : "Failed to load mock analytics."
+        presentDashboardError(error, {
+          fallbackMessage: "Failed to load mock analytics.",
+          fallbackTitle: "Analytics unavailable",
+          mockFallbackTitle: "Mock analytics unavailable"
         });
       });
     });
@@ -1011,14 +1226,10 @@
         button.setAttribute("aria-pressed", "false");
       });
       await refreshDashboard().catch((error) => {
-        setAuthState({
-          title: isMockModeEnabled() ? "Unable to load mock analytics" : "Unable to load analytics",
-          message: error instanceof Error ? error.message : "Failed to load analytics.",
-          actions: isMockModeEnabled()
-            ? authActionMarkup("mock-signin", "Re-open mock dashboard")
-            : state.config?.admin?.enabled && isConfigUsable()
-              ? authActionMarkup("signin", "Sign in again")
-              : ""
+        presentDashboardError(error, {
+          fallbackMessage: "Failed to load analytics.",
+          fallbackTitle: "Unable to load analytics",
+          mockFallbackTitle: "Unable to load mock analytics"
         });
       });
     });
@@ -1033,14 +1244,10 @@
           candidate.setAttribute("aria-pressed", String(active));
         });
         await refreshDashboard().catch((error) => {
-          setAuthState({
-            title: isMockModeEnabled() ? "Unable to load mock analytics" : "Unable to load analytics",
-            message: error instanceof Error ? error.message : "Failed to load analytics.",
-            actions: isMockModeEnabled()
-              ? authActionMarkup("mock-signin", "Re-open mock dashboard")
-              : state.config?.admin?.enabled && isConfigUsable()
-                ? authActionMarkup("signin", "Sign in again")
-                : ""
+          presentDashboardError(error, {
+            fallbackMessage: "Failed to load analytics.",
+            fallbackTitle: "Unable to load analytics",
+            mockFallbackTitle: "Unable to load mock analytics"
           });
         });
       });
@@ -1072,7 +1279,11 @@
     const error = params.get("error");
     if (error) {
       const message = params.get("error_description") || "Sign-in was cancelled or rejected.";
-      throw new Error(message);
+      throw createDashboardError(message, {
+        action: "signin",
+        clearToken: true,
+        title: "Sign-in failed"
+      });
     }
 
     const code = params.get("code");
@@ -1086,6 +1297,7 @@
       message: "Exchanging the Cognito authorization code for a session token."
     });
     await exchangeCodeForToken(code, returnedState || "");
+    return true;
   };
 
   const initialize = async () => {
@@ -1127,29 +1339,23 @@
         return;
       }
 
-      await processCallbackIfNeeded();
+      const completedSignIn = await processCallbackIfNeeded();
       const token = getStoredToken();
       if (!token) {
         setAuthState({
           title: "Private analytics",
-          message: "Sign in with the Cognito-backed admin flow to access site and article analytics.",
+          message: "Sign in with your Cognito admin username to access site and article analytics.",
           actions: authActionMarkup("signin", "Sign in")
         });
         return;
       }
 
-      await refreshDashboard();
+      await refreshDashboard({ showLoadingState: completedSignIn });
     } catch (error) {
-      clearToken();
-      clearMockSession();
-      setAuthState({
-        title: isMockModeEnabled() ? "Mock analytics unavailable" : "Analytics unavailable",
-        message: error instanceof Error ? error.message : "Failed to initialize the analytics dashboard.",
-        actions: isMockModeEnabled()
-          ? authActionMarkup("mock-signin", "Open mock dashboard")
-          : state.config?.admin?.enabled && isConfigUsable()
-            ? authActionMarkup("signin", "Sign in again")
-            : ""
+      presentDashboardError(error, {
+        fallbackMessage: "Failed to initialize the analytics dashboard.",
+        fallbackTitle: "Analytics unavailable",
+        mockFallbackTitle: "Mock analytics unavailable"
       });
     }
   };
