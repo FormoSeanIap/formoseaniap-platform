@@ -14,7 +14,7 @@ output "analytics_cognito_client_id" {
 }
 
 output "analytics_cognito_domain_url" {
-  description = "Cognito hosted UI base URL for analytics admin authentication."
+  description = "Resolved Cognito domain URL for analytics admin authentication."
   value       = local.analytics_cognito_domain_url
 }
 

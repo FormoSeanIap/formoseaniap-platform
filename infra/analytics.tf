@@ -7,17 +7,25 @@ locals {
     for path in sort(fileset("${path.module}/../analytics_backend", "**/*.py")) :
     path => path
   }
-  analytics_cognito_domain_name = (
+  analytics_cognito_prefix_domain_name = (
     var.analytics_cognito_domain_prefix != ""
     ? var.analytics_cognito_domain_prefix
     : "${local.name_prefix}-${data.aws_caller_identity.current.account_id}"
   )
-  analytics_cognito_domain_url = "https://${aws_cognito_user_pool_domain.analytics.domain}.auth.${var.aws_region}.amazoncognito.com"
-  analytics_cognito_issuer     = "https://cognito-idp.${var.aws_region}.amazonaws.com/${aws_cognito_user_pool.analytics.id}"
+  analytics_cognito_domain_url = (
+    local.custom_auth_domain_live
+    ? "https://${aws_cognito_user_pool_domain.analytics_custom.domain}"
+    : "https://${aws_cognito_user_pool_domain.analytics.domain}.auth.${var.aws_region}.amazoncognito.com"
+  )
+  analytics_cognito_issuer = "https://cognito-idp.${var.aws_region}.amazonaws.com/${aws_cognito_user_pool.analytics.id}"
   analytics_public_site_base_url = trimsuffix(
     var.public_site_base_url != ""
     ? var.public_site_base_url
-    : "https://${aws_cloudfront_distribution.site.domain_name}",
+    : (
+      local.custom_site_domain_live
+      ? "https://${local.site_canonical_domain}"
+      : "https://${aws_cloudfront_distribution.site.domain_name}"
+    ),
     "/",
   )
   analytics_runtime_config = {
@@ -226,7 +234,8 @@ resource "aws_lambda_function" "analytics_admin" {
 }
 
 resource "aws_cognito_user_pool" "analytics" {
-  name = "${local.name_prefix}-analytics"
+  name           = "${local.name_prefix}-analytics"
+  user_pool_tier = "ESSENTIALS"
 
   admin_create_user_config {
     allow_admin_create_user_only = true
@@ -280,7 +289,7 @@ resource "aws_cognito_user_pool" "analytics" {
 }
 
 resource "aws_cognito_user_pool_domain" "analytics" {
-  domain       = local.analytics_cognito_domain_name
+  domain       = local.analytics_cognito_prefix_domain_name
   user_pool_id = aws_cognito_user_pool.analytics.id
 }
 
