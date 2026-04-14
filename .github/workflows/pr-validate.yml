@@ -38,53 +38,21 @@ jobs:
     needs: terraform_validate
     if: ${{ needs.terraform_validate.outputs.has_tf_changes == 'true' && needs.terraform_validate.outputs.has_tf_root == 'true' }}
     runs-on: ubuntu-latest
-    defaults:
-      run:
-        shell: bash
-        working-directory: infra
 
     steps:
       - name: Check out repository
         uses: actions/checkout@v5
 
-      - name: Set up Terraform
-        uses: hashicorp/setup-terraform@v4
+      - name: Run shared Terraform plan
+        uses: ./.github/actions/terraform-plan
         with:
-          terraform_wrapper: false
-
-      - name: Note plan status when AWS is not configured
-        if: ${{ vars.AWS_REGION == '' || vars.AWS_TERRAFORM_PLAN_ROLE_ARN == '' }}
-        run: echo "Set AWS_REGION and AWS_TERRAFORM_PLAN_ROLE_ARN repo variables to enable terraform plan runs." >> "$GITHUB_STEP_SUMMARY"
-
-      - name: Configure AWS credentials from GitHub OIDC
-        if: ${{ vars.AWS_REGION != '' && vars.AWS_TERRAFORM_PLAN_ROLE_ARN != '' }}
-        uses: aws-actions/configure-aws-credentials@v6
-        with:
-          aws-region: ${{ vars.AWS_REGION }}
-          role-to-assume: ${{ vars.AWS_TERRAFORM_PLAN_ROLE_ARN }}
-          role-session-name: gha-terraform-plan-${{ github.event.pull_request.number }}
-
-      - name: Terraform init for plan
-        if: ${{ vars.AWS_REGION != '' && vars.AWS_TERRAFORM_PLAN_ROLE_ARN != '' }}
-        run: terraform init -input=false
-
-      - name: Terraform plan
-        if: ${{ vars.AWS_REGION != '' && vars.AWS_TERRAFORM_PLAN_ROLE_ARN != '' }}
-        run: terraform plan -input=false -no-color -out=tfplan
-
-      - name: Render textual plan
-        if: ${{ vars.AWS_REGION != '' && vars.AWS_TERRAFORM_PLAN_ROLE_ARN != '' }}
-        run: terraform show -no-color tfplan > tfplan.txt
-
-      - name: Upload plan artifacts
-        if: ${{ vars.AWS_REGION != '' && vars.AWS_TERRAFORM_PLAN_ROLE_ARN != '' }}
-        uses: actions/upload-artifact@v6
-        with:
-          name: terraform-plan-${{ github.event.pull_request.number }}
-          path: |
-            infra/tfplan
-            infra/tfplan.txt
-          if-no-files-found: error
+          aws_region: ${{ vars.AWS_REGION }}
+          role_arn: ${{ vars.AWS_TERRAFORM_PLAN_ROLE_ARN }}
+          role_session_name: gha-terraform-plan-${{ github.event.pull_request.number }}
+          emit_unconfigured_summary: "true"
+          summary_message: Set AWS_REGION and AWS_TERRAFORM_PLAN_ROLE_ARN repo variables to enable terraform plan runs.
+          upload_plan_artifact: "true"
+          plan_artifact_name: terraform-plan-${{ github.event.pull_request.number }}
 
   preview_ready:
     needs:

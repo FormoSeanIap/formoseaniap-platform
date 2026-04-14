@@ -1,0 +1,77 @@
+name: Terraform Plan
+description: Run an optional OIDC-backed Terraform plan for the infra root and optionally upload artifacts.
+
+inputs:
+  aws_region:
+    description: AWS region used for OIDC-backed Terraform plan runs.
+    required: false
+    default: ""
+  role_arn:
+    description: IAM role ARN to assume for the Terraform plan.
+    required: false
+    default: ""
+  role_session_name:
+    description: STS session name used when assuming the Terraform plan role.
+    required: true
+  emit_unconfigured_summary:
+    description: Write a summary note instead of failing when AWS settings are missing.
+    required: false
+    default: "true"
+  summary_message:
+    description: Summary text written when AWS settings are missing.
+    required: false
+    default: "Set AWS_REGION and AWS_TERRAFORM_PLAN_ROLE_ARN repo variables to enable terraform plan runs."
+  upload_plan_artifact:
+    description: Upload tfplan and tfplan.txt as a workflow artifact.
+    required: false
+    default: "false"
+  plan_artifact_name:
+    description: Artifact name used when upload_plan_artifact is true.
+    required: false
+    default: ""
+
+runs:
+  using: composite
+  steps:
+    - name: Set up Terraform
+      uses: hashicorp/setup-terraform@v4
+      with:
+        terraform_wrapper: false
+
+    - name: Note plan status when AWS is not configured
+      if: ${{ inputs.emit_unconfigured_summary == 'true' && (inputs.aws_region == '' || inputs.role_arn == '') }}
+      shell: bash
+      run: echo "${{ inputs.summary_message }}" >> "$GITHUB_STEP_SUMMARY"
+
+    - name: Configure AWS credentials from GitHub OIDC
+      if: ${{ inputs.aws_region != '' && inputs.role_arn != '' }}
+      uses: aws-actions/configure-aws-credentials@v6
+      with:
+        aws-region: ${{ inputs.aws_region }}
+        role-to-assume: ${{ inputs.role_arn }}
+        role-session-name: ${{ inputs.role_session_name }}
+
+    - name: Terraform init
+      if: ${{ inputs.aws_region != '' && inputs.role_arn != '' }}
+      shell: bash
+      run: terraform -chdir=infra init -input=false
+
+    - name: Terraform plan
+      if: ${{ inputs.aws_region != '' && inputs.role_arn != '' }}
+      shell: bash
+      run: terraform -chdir=infra plan -input=false -no-color -out=tfplan
+
+    - name: Render textual plan
+      if: ${{ inputs.aws_region != '' && inputs.role_arn != '' && inputs.upload_plan_artifact == 'true' }}
+      shell: bash
+      run: terraform -chdir=infra show -no-color tfplan > infra/tfplan.txt
+
+    - name: Upload plan artifacts
+      if: ${{ inputs.aws_region != '' && inputs.role_arn != '' && inputs.upload_plan_artifact == 'true' }}
+      uses: actions/upload-artifact@v6
+      with:
+        name: ${{ inputs.plan_artifact_name }}
+        path: |
+          infra/tfplan
+          infra/tfplan.txt
+        if-no-files-found: error

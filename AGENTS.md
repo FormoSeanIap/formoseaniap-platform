@@ -13,6 +13,17 @@
 - After Terraform edits, run `python3 scripts/terraform_validate_strict.py`.
 - Treat Terraform deprecation warnings as blocking. Do not leave deprecated settings in the repo even if plain `terraform validate` still exits successfully.
 
+## AWS OIDC Policy Review
+
+- When Terraform-managed AWS resources change, review whether these GitHub Actions OIDC permission policy examples still match the Terraform surface:
+  - `docs/examples/aws-oidc-policy-terraform-plan.json`
+  - `docs/examples/aws-oidc-policy-terraform-apply-prod.json`
+- Default expectation:
+  - `aws-oidc-policy-terraform-plan.json` needs read/list/describe access for every Terraform-managed AWS service refreshed during `terraform plan`
+  - `aws-oidc-policy-terraform-apply-prod.json` needs create/update/delete/read access for every Terraform-managed AWS service managed during production apply
+- Do not update `docs/examples/aws-oidc-policy-deploy-prod.json` unless the production deploy workflow changes what it does after Terraform, such as deploying to different buckets, invalidating different distributions, or calling additional AWS APIs.
+- When changing GitHub Actions workflow triggers, environments, or role-assumption contexts, also review the matching OIDC trust policy examples under `docs/examples/`.
+
 ## Todo Capture
 
 - Use `docs/inbox.md` for quick idea capture when the user explicitly asks to add a todo.
