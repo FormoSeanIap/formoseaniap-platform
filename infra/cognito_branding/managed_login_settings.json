@@ -1,0 +1,85 @@
+{
+  "categories": {
+    "auth": {
+      "authMethodOrder": [
+        [
+          {
+            "display": "INPUT",
+            "type": "USERNAME_PASSWORD"
+          }
+        ]
+      ]
+    },
+    "form": {
+      "displayGraphics": true,
+      "instructions": {
+        "enabled": false
+      },
+      "languageSelector": {
+        "enabled": false
+      },
+      "location": {
+        "horizontal": "CENTER",
+        "vertical": "CENTER"
+      },
+      "sessionTimerDisplay": "NONE"
+    },
+    "global": {
+      "pageFooter": {
+        "enabled": false
+      },
+      "pageHeader": {
+        "enabled": false
+      },
+      "spacingDensity": "REGULAR"
+    }
+  },
+  "componentClasses": {
+    "buttons": {
+      "borderRadius": 999
+    },
+    "focusState": {
+      "darkMode": {
+        "borderColor": "f7f7f7ff"
+      },
+      "lightMode": {
+        "borderColor": "7a6148ff"
+      }
+    },
+    "input": {
+      "borderRadius": 18,
+      "darkMode": {
+        "defaults": {
+          "backgroundColor": "141414f2",
+          "borderColor": "2a2a2aff"
+        },
+        "placeholderColor": "b7b7b7ff"
+      },
+      "lightMode": {
+        "defaults": {
+          "backgroundColor": "fffaf3ff",
+          "borderColor": "8e765fff"
+        },
+        "placeholderColor": "64584dff"
+      }
+    },
+    "link": {
+      "darkMode": {
+        "defaults": {
+          "textColor": "f7f7f7ff"
+        },
+        "hover": {
+          "textColor": "cfcfcfff"
+        }
+      },
+      "lightMode": {
+        "defaults": {
+          "textColor": "7a6148ff"
+        },
+        "hover": {
+          "textColor": "17120dff"
+        }
+      }
+    }
+  }
+}

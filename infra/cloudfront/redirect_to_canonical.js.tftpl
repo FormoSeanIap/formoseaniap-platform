@@ -1,0 +1,51 @@
+function buildQueryString(querystring) {
+  if (!querystring || typeof querystring !== "object") {
+    return "";
+  }
+
+  var keys = Object.keys(querystring);
+  var pairs = [];
+
+  for (var index = 0; index < keys.length; index += 1) {
+    var key = keys[index];
+    var entry = querystring[key];
+
+    if (!entry) {
+      continue;
+    }
+
+    if (entry.multiValue && entry.multiValue.length > 0) {
+      for (var multiIndex = 0; multiIndex < entry.multiValue.length; multiIndex += 1) {
+        var multiEntry = entry.multiValue[multiIndex];
+        var multiValue = multiEntry && Object.prototype.hasOwnProperty.call(multiEntry, "value") ? multiEntry.value : "";
+        pairs.push(encodeURIComponent(key) + "=" + encodeURIComponent(multiValue));
+      }
+      continue;
+    }
+
+    var value = Object.prototype.hasOwnProperty.call(entry, "value") ? entry.value : "";
+    pairs.push(encodeURIComponent(key) + "=" + encodeURIComponent(value));
+  }
+
+  return pairs.length > 0 ? "?" + pairs.join("&") : "";
+}
+
+function handler(event) {
+  var request = event.request;
+  var headers = request.headers || {};
+  var host = headers.host && headers.host.value ? headers.host.value.toLowerCase() : "";
+  var canonicalHost = "${canonical_host}";
+
+  if (host === canonicalHost) {
+    return request;
+  }
+
+  return {
+    statusCode: 308,
+    statusDescription: "Permanent Redirect",
+    headers: {
+      "cache-control": { value: "public, max-age=300" },
+      location: { value: "https://" + canonicalHost + request.uri + buildQueryString(request.querystring) }
+    }
+  };
+}
