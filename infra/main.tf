@@ -21,11 +21,21 @@ provider "aws" {
   region = var.aws_region
 }
 
+provider "aws" {
+  alias  = "us_east_1"
+  region = "us-east-1"
+}
+
 data "aws_caller_identity" "current" {}
 
 locals {
   name_prefix                  = "${var.project_name}-${var.environment}"
   cloudfront_distribution_name = "${local.name_prefix}-site-cdn"
+  site_apex_domain             = trimsuffix(var.site_root_domain, ".")
+  site_canonical_domain        = "${var.site_canonical_subdomain}.${local.site_apex_domain}"
+  analytics_auth_domain        = "${var.analytics_auth_subdomain}.${local.site_apex_domain}"
+  custom_auth_domain_live      = try(aws_cognito_user_pool_domain.analytics_custom.domain, null) != null
+  custom_site_domain_live      = try(aws_acm_certificate_validation.site.certificate_arn, null) != null
   s3_origin_id                 = "${local.name_prefix}-site-s3"
   soundon_origin_id            = "${local.name_prefix}-soundon-rss"
   site_bucket_name = (
@@ -94,6 +104,7 @@ resource "aws_cloudfront_origin_access_control" "site" {
 }
 
 resource "aws_cloudfront_distribution" "site" {
+  aliases             = [local.site_apex_domain, local.site_canonical_domain]
   comment             = local.cloudfront_distribution_name
   default_root_object = var.default_root_object
   enabled             = true
@@ -139,6 +150,15 @@ resource "aws_cloudfront_distribution" "site" {
     compress               = true
     target_origin_id       = local.s3_origin_id
     viewer_protocol_policy = "redirect-to-https"
+
+    dynamic "function_association" {
+      for_each = [aws_cloudfront_function.redirect_to_canonical.arn]
+
+      content {
+        event_type   = "viewer-request"
+        function_arn = function_association.value
+      }
+    }
   }
 
   ordered_cache_behavior {
@@ -149,6 +169,15 @@ resource "aws_cloudfront_distribution" "site" {
     path_pattern           = var.podcast_feed_path_pattern
     target_origin_id       = local.soundon_origin_id
     viewer_protocol_policy = "redirect-to-https"
+
+    dynamic "function_association" {
+      for_each = [aws_cloudfront_function.redirect_to_canonical.arn]
+
+      content {
+        event_type   = "viewer-request"
+        function_arn = function_association.value
+      }
+    }
   }
 
   ordered_cache_behavior {
@@ -160,6 +189,15 @@ resource "aws_cloudfront_distribution" "site" {
     path_pattern             = var.analytics_api_path_pattern
     target_origin_id         = local.analytics_api_origin_id
     viewer_protocol_policy   = "redirect-to-https"
+
+    dynamic "function_association" {
+      for_each = [aws_cloudfront_function.redirect_to_canonical.arn]
+
+      content {
+        event_type   = "viewer-request"
+        function_arn = function_association.value
+      }
+    }
   }
 
   restrictions {
@@ -170,7 +208,10 @@ resource "aws_cloudfront_distribution" "site" {
   }
 
   viewer_certificate {
-    cloudfront_default_certificate = true
+    acm_certificate_arn            = aws_acm_certificate_validation.site.certificate_arn
+    cloudfront_default_certificate = false
+    minimum_protocol_version       = "TLSv1.2_2021"
+    ssl_support_method             = "sni-only"
   }
 
   # Flat-rate CloudFront plans can auto-attach a required web ACL in the console.

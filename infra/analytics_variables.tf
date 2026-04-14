@@ -24,7 +24,7 @@ variable "analytics_api_path_pattern" {
 
 variable "analytics_cognito_domain_prefix" {
   default     = ""
-  description = "Optional explicit Cognito hosted UI domain prefix. Leave blank to derive one from the project, environment, and AWS account ID."
+  description = "Optional explicit fallback Cognito prefix domain. Leave blank to derive one from the project, environment, and AWS account ID."
   type        = string
 }
 
@@ -60,7 +60,6 @@ variable "analytics_uniques_ttl_days" {
 
 variable "public_site_base_url" {
   default     = ""
-  description = "Public base URL for the production site, used for Cognito callback and logout URLs. Leave blank to default to the CloudFront distribution domain."
+  description = "Public base URL for the production site, used for Cognito callback and logout URLs. Leave blank to use the canonical custom domain after the custom-domain infrastructure is live, otherwise the CloudFront distribution domain."
   type        = string
 }
-
