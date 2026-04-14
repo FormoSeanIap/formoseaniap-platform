@@ -27,12 +27,39 @@ DESERIALIZER = TypeDeserializer()
 
 class FakeDynamoTable:
     def __init__(self, items=None):
-        self.items = items or {}
+        self.items = {} if items is None else items
 
     def get_item(self, *, Key, ConsistentRead=False):  # noqa: N803
         del ConsistentRead
         item = self.items.get((Key["pk"], Key["sk"]))
         return {"Item": dict(item)} if item is not None else {}
+
+    def put_item(self, *, Item, ConditionExpression):  # noqa: N803
+        assert ConditionExpression == "attribute_not_exists(pk) AND attribute_not_exists(sk)"
+        key = (Item["pk"], Item["sk"])
+        if key in self.items:
+            raise ClientError(
+                {"Error": {"Code": "ConditionalCheckFailedException", "Message": "Conditional failed"}},
+                "PutItem",
+            )
+        self.items[key] = dict(Item)
+        return {}
+
+    def update_item(self, *, Key, UpdateExpression, ExpressionAttributeNames, ExpressionAttributeValues):  # noqa: N803
+        assert "ADD #views :views, #unique_visitors :unique_visitors" in UpdateExpression
+        key = (Key["pk"], Key["sk"])
+        current = self.items.setdefault(key, {"pk": Key["pk"], "sk": Key["sk"], "views": 0, "unique_visitors": 0})
+        current["entity_type"] = ExpressionAttributeValues[":entity_type"]
+        current["entity_id"] = ExpressionAttributeValues[":entity_id"]
+        current["lang"] = ExpressionAttributeValues[":lang"]
+        current["date"] = ExpressionAttributeValues[":date"]
+        current["gsi1pk"] = ExpressionAttributeValues[":gsi1pk"]
+        current["gsi1sk"] = ExpressionAttributeValues[":gsi1sk"]
+        current["views"] = int(current.get("views") or 0) + int(ExpressionAttributeValues[":views"])
+        current["unique_visitors"] = int(current.get("unique_visitors") or 0) + int(
+            ExpressionAttributeValues[":unique_visitors"]
+        )
+        return {"Attributes": dict(current)}
 
 
 class FakeDynamoClient:
@@ -43,41 +70,6 @@ class FakeDynamoClient:
     def _deserialize_map(self, value):
         return {key: DESERIALIZER.deserialize(item) for key, item in value.items()}
 
-    def transact_write_items(self, *, TransactItems):  # noqa: N803
-        pending_uniques = []
-
-        for action in TransactItems:
-            if "Put" in action:
-                item = self._deserialize_map(action["Put"]["Item"])
-                key = (item["pk"], item["sk"])
-                if key in self.uniques.items:
-                    raise ClientError(
-                        {"Error": {"Code": "TransactionCanceledException", "Message": "Conditional failed"}},
-                        "TransactWriteItems",
-                    )
-                pending_uniques.append((key, item))
-
-        for key, item in pending_uniques:
-            self.uniques.items[key] = item
-
-        for action in TransactItems:
-            if "Update" not in action:
-                continue
-
-            update = action["Update"]
-            key = self._deserialize_map(update["Key"])
-            attrs = self._deserialize_map(update["ExpressionAttributeValues"])
-            item_key = (key["pk"], key["sk"])
-            current = self.counters.setdefault(item_key, {"pk": key["pk"], "sk": key["sk"], "views": 0, "unique_visitors": 0})
-            current["entity_type"] = attrs[":entity_type"]
-            current["entity_id"] = attrs[":entity_id"]
-            current["lang"] = attrs[":lang"]
-            current["date"] = attrs[":date"]
-            current["gsi1pk"] = attrs[":gsi1pk"]
-            current["gsi1sk"] = attrs[":gsi1sk"]
-            current["views"] += int(attrs[":views"])
-            current["unique_visitors"] += int(attrs[":unique_visitors"])
-
 
 class FakeDynamoResource:
     def __init__(self):
@@ -86,7 +78,8 @@ class FakeDynamoResource:
         self.meta = type("Meta", (), {"client": FakeDynamoClient(self.counters, self.uniques)})()
 
     def Table(self, name):  # noqa: N802
-        del name
+        if name == "analytics_daily_counters":
+            return FakeDynamoTable(self.counters)
         return self.uniques
 
 
@@ -222,6 +215,84 @@ class CollectorStoreTests(unittest.TestCase):
         self.assertEqual(entity_counter["unique_visitors"], 1)
         self.assertEqual(site_counter["views"], 2)
         self.assertEqual(site_counter["unique_visitors"], 1)
+
+    def test_record_view_aliases_reserved_views_attribute(self):
+        fake_resource = FakeDynamoResource()
+        store = DynamoCollectorStore(
+            counters_table_name="analytics_daily_counters",
+            uniques_table_name="analytics_daily_uniques",
+            dynamodb_resource=fake_resource,
+            dynamodb_client=fake_resource.meta.client,
+        )
+        event = validate_view_event(
+            {
+                "scope": "page",
+                "page_key": "home",
+                "article_id": None,
+                "lang": None,
+                "visitor_id": "123e4567-e89b-12d3-a456-426614174000",
+            }
+        )
+
+        result = store.record_view(
+            event,
+            hashed_visitor_id="visitor-b",
+            day=date(2026, 4, 12),
+            uniques_ttl_days=7,
+        )
+
+        self.assertEqual(result, {"entity_unique": True, "site_unique": True})
+        entity_counter = fake_resource.counters[("PAGE#home", "DAY#2026-04-12")]
+        self.assertEqual(entity_counter["views"], 1)
+
+    def test_record_view_backfills_missing_counter_metrics(self):
+        fake_resource = FakeDynamoResource()
+        fake_resource.counters[("PAGE#home", "DAY#2026-04-12")] = {
+            "pk": "PAGE#home",
+            "sk": "DAY#2026-04-12",
+            "entity_type": "page",
+            "entity_id": "home",
+            "lang": None,
+            "date": "2026-04-12",
+            "gsi1pk": "DAY#2026-04-12",
+            "gsi1sk": "PAGE#home",
+        }
+        fake_resource.counters[("SITE#ALL", "DAY#2026-04-12")] = {
+            "pk": "SITE#ALL",
+            "sk": "DAY#2026-04-12",
+            "entity_type": "site",
+            "entity_id": "ALL",
+            "lang": None,
+            "date": "2026-04-12",
+            "gsi1pk": "DAY#2026-04-12",
+            "gsi1sk": "SITE#ALL",
+        }
+        store = DynamoCollectorStore(
+            counters_table_name="analytics_daily_counters",
+            uniques_table_name="analytics_daily_uniques",
+            dynamodb_resource=fake_resource,
+            dynamodb_client=fake_resource.meta.client,
+        )
+        event = validate_view_event(
+            {
+                "scope": "page",
+                "page_key": "home",
+                "article_id": None,
+                "lang": None,
+                "visitor_id": "123e4567-e89b-12d3-a456-426614174000",
+            }
+        )
+
+        result = store.record_view(
+            event,
+            hashed_visitor_id="visitor-c",
+            day=date(2026, 4, 12),
+            uniques_ttl_days=7,
+        )
+
+        self.assertEqual(result, {"entity_unique": True, "site_unique": True})
+        self.assertEqual(fake_resource.counters[("PAGE#home", "DAY#2026-04-12")]["views"], 1)
+        self.assertEqual(fake_resource.counters[("PAGE#home", "DAY#2026-04-12")]["unique_visitors"], 1)
 
 
 class AdminAggregationTests(unittest.TestCase):

@@ -10,7 +10,6 @@ from datetime import date, datetime, time, timedelta, timezone
 from typing import Any
 
 import boto3
-from boto3.dynamodb.types import TypeSerializer
 from botocore.exceptions import ClientError
 
 from analytics_backend.config import ALLOWED_LANGS, ALLOWED_PAGE_KEYS, Settings
@@ -18,7 +17,6 @@ from analytics_backend.http import json_response
 
 
 VISITOR_ID_RE = re.compile(r"^[A-Za-z0-9][A-Za-z0-9-]{7,127}$")
-SERIALIZER = TypeSerializer()
 
 
 class ValidationError(ValueError):
@@ -141,20 +139,83 @@ class DynamoCollectorStore:
         self._client = dynamodb_client or self._resource.meta.client
         self.counters_table_name = counters_table_name
         self.uniques_table_name = uniques_table_name
+        self.counters_table = self._resource.Table(counters_table_name)
         self.uniques_table = self._resource.Table(uniques_table_name)
 
-    def _unique_exists(self, entity_key: str, day_key: str, hashed_visitor_id: str) -> bool:
-        response = self.uniques_table.get_item(
-            Key={
-                "pk": f"ENTITY#{entity_key}#{day_key}",
-                "sk": f"VISITOR#{hashed_visitor_id}",
-            },
-            ConsistentRead=True,
-        )
-        return "Item" in response
+    def _claim_unique(
+        self,
+        *,
+        entity_key: str,
+        day_key: str,
+        hashed_visitor_id: str,
+        expires_at: int,
+    ) -> bool:
+        try:
+            self.uniques_table.put_item(
+                Item={
+                    "pk": f"ENTITY#{entity_key}#{day_key}",
+                    "sk": f"VISITOR#{hashed_visitor_id}",
+                    "expire_at": expires_at,
+                },
+                ConditionExpression="attribute_not_exists(pk) AND attribute_not_exists(sk)",
+            )
+            return True
+        except ClientError as exc:
+            error = exc.response.get("Error", {})
+            code = error.get("Code")
+            if code == "ConditionalCheckFailedException":
+                return False
+            raise RuntimeError(
+                f"Failed to claim unique visitor for {entity_key} on {day_key}: "
+                f"{code or 'UnknownError'}: {error.get('Message', 'No message returned')}"
+            ) from exc
 
-    def _serialize(self, item: dict[str, Any]) -> dict[str, Any]:
-        return {key: SERIALIZER.serialize(value) for key, value in item.items()}
+    def _increment_counter(
+        self,
+        *,
+        entity_key: str,
+        day_key: str,
+        day_value: str,
+        entity_type: str,
+        entity_id: str,
+        lang: str | None,
+        unique_increment: int,
+    ) -> None:
+        try:
+            self.counters_table.update_item(
+                Key={
+                    "pk": entity_key,
+                    "sk": day_key,
+                },
+                UpdateExpression=(
+                    "SET entity_type = :entity_type, entity_id = :entity_id, #lang = :lang, "
+                    "#date = :date, gsi1pk = :gsi1pk, gsi1sk = :gsi1sk "
+                    "ADD #views :views, #unique_visitors :unique_visitors"
+                ),
+                ExpressionAttributeNames={
+                    "#date": "date",
+                    "#lang": "lang",
+                    "#unique_visitors": "unique_visitors",
+                    "#views": "views",
+                },
+                ExpressionAttributeValues={
+                    ":date": day_value,
+                    ":entity_id": entity_id,
+                    ":entity_type": entity_type,
+                    ":gsi1pk": day_key,
+                    ":gsi1sk": entity_key,
+                    ":lang": lang,
+                    ":unique_visitors": unique_increment,
+                    ":views": 1,
+                },
+            )
+        except ClientError as exc:
+            error = exc.response.get("Error", {})
+            code = error.get("Code")
+            raise RuntimeError(
+                f"Failed to update counter for {entity_key} on {day_key}: "
+                f"{code or 'UnknownError'}: {error.get('Message', 'No message returned')}"
+            ) from exc
 
     def record_view(
         self,
@@ -187,95 +248,33 @@ class DynamoCollectorStore:
             },
         ]
 
-        for _ in range(4):
-            entity_seen = self._unique_exists(entity_unique_key, day_key, hashed_visitor_id)
-            site_seen = self._unique_exists(site_unique_key, day_key, hashed_visitor_id)
-            transact_items: list[dict[str, Any]] = []
+        result = {
+            "entity_unique": self._claim_unique(
+                entity_key=entity_unique_key,
+                day_key=day_key,
+                hashed_visitor_id=hashed_visitor_id,
+                expires_at=expires_at,
+            ),
+            "site_unique": self._claim_unique(
+                entity_key=site_unique_key,
+                day_key=day_key,
+                hashed_visitor_id=hashed_visitor_id,
+                expires_at=expires_at,
+            ),
+        }
 
-            if not entity_seen:
-                transact_items.append(
-                    {
-                        "Put": {
-                            "TableName": self.uniques_table_name,
-                            "Item": self._serialize(
-                                {
-                                    "pk": f"ENTITY#{entity_unique_key}#{day_key}",
-                                    "sk": f"VISITOR#{hashed_visitor_id}",
-                                    "expire_at": expires_at,
-                                }
-                            ),
-                            "ConditionExpression": "attribute_not_exists(pk) AND attribute_not_exists(sk)",
-                        }
-                    }
-                )
+        for target, is_unique in zip(counter_targets, [result["entity_unique"], result["site_unique"]], strict=True):
+            self._increment_counter(
+                entity_key=target["entity_key"],
+                day_key=day_key,
+                day_value=day_value,
+                entity_type=target["entity_type"],
+                entity_id=target["entity_id"],
+                lang=target["lang"],
+                unique_increment=1 if is_unique else 0,
+            )
 
-            if not site_seen:
-                transact_items.append(
-                    {
-                        "Put": {
-                            "TableName": self.uniques_table_name,
-                            "Item": self._serialize(
-                                {
-                                    "pk": f"ENTITY#{site_unique_key}#{day_key}",
-                                    "sk": f"VISITOR#{hashed_visitor_id}",
-                                    "expire_at": expires_at,
-                                }
-                            ),
-                            "ConditionExpression": "attribute_not_exists(pk) AND attribute_not_exists(sk)",
-                        }
-                    }
-                )
-
-            unique_flags = [not entity_seen, not site_seen]
-            for target, is_unique in zip(counter_targets, unique_flags, strict=True):
-                transact_items.append(
-                    {
-                        "Update": {
-                            "TableName": self.counters_table_name,
-                            "Key": self._serialize(
-                                {
-                                    "pk": target["entity_key"],
-                                    "sk": day_key,
-                                }
-                            ),
-                            "UpdateExpression": (
-                                "SET entity_type = :entity_type, entity_id = :entity_id, #lang = :lang, "
-                                "#date = :date, gsi1pk = :gsi1pk, gsi1sk = :gsi1sk "
-                                "ADD views :views, unique_visitors :unique_visitors"
-                            ),
-                            "ExpressionAttributeNames": {
-                                "#date": "date",
-                                "#lang": "lang",
-                            },
-                            "ExpressionAttributeValues": self._serialize(
-                                {
-                                    ":date": day_value,
-                                    ":entity_id": target["entity_id"],
-                                    ":entity_type": target["entity_type"],
-                                    ":gsi1pk": day_key,
-                                    ":gsi1sk": target["entity_key"],
-                                    ":lang": target["lang"],
-                                    ":unique_visitors": 1 if is_unique else 0,
-                                    ":views": 1,
-                                }
-                            ),
-                        }
-                    }
-                )
-
-            try:
-                self._client.transact_write_items(TransactItems=transact_items)
-                return {
-                    "entity_unique": not entity_seen,
-                    "site_unique": not site_seen,
-                }
-            except ClientError as exc:
-                code = exc.response.get("Error", {}).get("Code")
-                if code == "TransactionCanceledException":
-                    continue
-                raise
-
-        raise RuntimeError("Failed to record analytics event after retrying transactional writes.")
+        return result
 
 
 def handle_collect_request(
