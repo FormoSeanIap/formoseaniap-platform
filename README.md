@@ -43,11 +43,14 @@ Implemented:
   - CloudFront `/podcasts/*` behavior routed to the SoundOn RSS origin for same-origin browser fetches
   - CloudFront `/analytics-api/*` behavior routed to an API Gateway HTTP API for same-origin analytics collection and admin reads
   - Lambda-backed analytics collector/admin handlers with DynamoDB daily counters + uniqueness state
-  - Cognito managed-login redirect flow for the private analytics admin page, with username-based sign-in and a separate full-name display attribute
+  - Route 53 hosted zone foundation for `formoseaniap.com`, ready for a future registrar or DNS-authority transfer
+  - Custom-domain infrastructure for `www.formoseaniap.com` with manual external-DNS validation/cutover outputs, apex redirect, and a CloudFront viewer-request redirect function
+  - Cognito managed-login redirect flow for the private analytics admin page, with username-based sign-in, `ESSENTIALS` user-pool tier, and a separate full-name display attribute
 - Private analytics admin surface:
   - Dedicated `site/admin/analytics.html` page with a branded sign-in shell
   - Production-only Cognito managed-login redirect with Authorization Code + PKCE
   - Admin users sign in with a Cognito `username`; the dashboard displays standard `name`, then falls back to `email`
+  - `auth.formoseaniap.com` custom-domain infrastructure and managed-login branding assets for the Cognito sign-in experience
   - Same-origin browser analytics events for public page loads and article detail reads
   - Deploy-time runtime config written to `site/data/analytics.config.json` from Terraform outputs
 - Python-based article build pipeline:
@@ -127,6 +130,11 @@ Build-time flow:
   - analytics_outputs.tf       analytics runtime outputs consumed by production deploy
   - analytics_variables.tf     analytics-related Terraform variables
   - backend.tf                 S3 remote backend config
+  - cloudfront/                CloudFront Function templates for canonical-host redirects
+  - cognito_branding/          managed-login branding JSON + SVG assets for Cognito
+  - domain.tf                  Route 53 hosted zone, ACM staging, aliases, and auth custom-domain resources
+  - domain_outputs.tf          Route 53, manual DNS, and public URL outputs
+  - domain_variables.tf        domain naming variables
   - main.tf                    private S3 + CloudFront OAC production site stack
   - variables.tf               production infrastructure variables
   - outputs.tf                 site bucket and CloudFront outputs
@@ -356,6 +364,7 @@ Generated outputs:
 - `site/assets/articles/**` (copied image assets referenced by markdown)
 - `site/rss.xml`
 - `site/zh/rss.xml`
+- `content/site.json` sets the canonical site URL used in generated RSS item links and feed self links. It currently points at `https://www.formoseaniap.com`.
 
 Tracked runtime placeholders:
 - `site/data/analytics.config.json` is committed as a disabled placeholder for local work and PR previews.
@@ -516,12 +525,19 @@ Important:
   - Lambda collector/admin functions
   - DynamoDB daily counter and uniqueness tables
   - Cognito User Pool, App Client, hosted-login domain, and `analytics-admin` group for username-based admin login
+- The production stack now also creates the Route 53 public hosted zone for `formoseaniap.com` as the future authoritative zone when the registrar and DNS move are possible.
+- The default Terraform design includes the full custom-domain infrastructure:
+  - site and auth ACM certificates in `us-east-1`
+  - CloudFront aliases for `formoseaniap.com` and `www.formoseaniap.com`
+  - a canonical-host redirect function to `https://www.formoseaniap.com`
+  - Cognito custom domain `https://auth.formoseaniap.com`
+  - managed-login branding assets/settings for the analytics admin login
+- When the live DNS provider is still external, the first plain `terraform apply` may stop at ACM validation until you mirror the emitted validation `CNAME`s into Cloudflare, then rerun the same plain `terraform apply`.
 - Terraform leaves CloudFront `price_class` unset while the distribution is on a console-managed flat-rate plan, because Free/Pro plans do not allow the price class feature on distribution updates.
 - The CloudFront distribution uses AWS-managed cache policies only: `CachingOptimized` for the static site and `CachingDisabled` for `/podcasts/*` and `/analytics-api/*`, avoiding the Business-only custom caching rules that block Free/Pro flat-rate plan changes in the AWS console.
 - If a CloudFront flat-rate plan auto-attaches a required WAF web ACL, Terraform ignores `web_acl_id` drift on the distribution and leaves that console-managed association in place.
 - If you later move the distribution back to pay-as-you-go, set `cloudfront_price_class` explicitly to a value such as `PriceClass_100`.
 - If you manually enable a CloudFront flat-rate plan in the AWS console, Terraform cannot currently unsubscribe or destroy that distribution until the plan is canceled manually and the current billing cycle ends.
-- The production auth flow still uses the Cognito-hosted domain on the default CloudFront hostname; moving auth onto a future custom domain is tracked in `docs/inbox.md`.
 - If infrastructure later splits into multiple stacks or modules, update the Terraform workflows to target each stack explicitly.
 
 ## AWS Deployment Next Steps
@@ -532,14 +548,15 @@ Resume AWS rollout from these steps:
 2. Create the IAM roles and policies from `docs/aws-oidc-github-actions.md`.
 3. Use `docs/examples/aws-oidc-trust-policy-plan-and-output.json` for the Terraform plan role, because PRs and main-branch pre-promotion plans still use a read-only role.
 4. Set GitHub repository variables: `AWS_REGION`, `AWS_TERRAFORM_PLAN_ROLE_ARN`, `AWS_TERRAFORM_APPLY_ROLE_ARN`, and `AWS_PROD_ROLE_ARN`.
-5. Set `public_site_base_url` for Terraform if you want Cognito callbacks to use a custom production hostname instead of the default CloudFront domain; this is optional until the custom domain is ready.
-6. After the production stack is applied, manually create the first Cognito admin user with `username`, `name`, and `email`, then add that user to the `analytics-admin` group.
-7. Expect a direct auth cutover whenever the analytics user pool is rebuilt: old admin sessions become invalid and existing hosted-login state must be recreated.
-8. Run `AWS OIDC Smoke` against a `prod` environment-scoped role.
-9. Merge or push the release to `main`.
-10. Review the optional Terraform plan artifact from `Push Main` when it is available, then approve the protected `prod` environment.
-11. Let the gated `Push Main` workflow always run Terraform plan/apply against the production stack and deploy the generated site; it reads `site_bucket_name`, `cloudfront_distribution_id`, and analytics runtime config outputs from Terraform remote state, so separate production bucket/distribution variables are not required.
-12. Verify the CloudFront distribution serves the static site, that `podcasts.html` loads live episodes through same-origin `/podcasts/*.xml` feed paths, and that `/admin/analytics.html` can complete Cognito username-based sign-in on the production site.
+5. Run a plain `terraform apply` so Terraform creates the hosted zone, requests the ACM certificates, and starts the full custom-domain infrastructure rollout.
+6. If that first apply stops at ACM validation, read `manual_dns_validation_records` and `manual_dns_prerequisites` from Terraform output or state, then create those validation `CNAME`s at the live DNS provider. Before Cognito can create `auth.formoseaniap.com`, AWS requires the parent domain `formoseaniap.com` to resolve through a real public `A` record. If Cloudflare is still authoritative, do not rely only on proxying or apex CNAME flattening for this step; create a temporary `DNS only` apex `A` record, rerun apply until the Cognito custom domain succeeds, and then replace that temporary record with the final site cutover record.
+7. Rerun the same plain `terraform apply` after ACM validation has propagated so Terraform can validate the certificates, attach the site aliases, create the canonical-host redirect function, and create `https://auth.formoseaniap.com` plus its branding.
+8. Create the final live DNS records from `manual_dns_site_cutover_records` and `manual_dns_auth_cutover_record`. For Cloudflare, use `DNS only`; the apex record should use Cloudflare CNAME flattening to the CloudFront hostname.
+9. After the custom-domain apply finishes, manually create the first Cognito admin user with `username`, `name`, and `email`, then add that user to the `analytics-admin` group if the pool is new or has been replaced.
+10. Verify `https://www.formoseaniap.com`, the apex redirect, the legacy CloudFront redirect, `/podcasts/*`, `/analytics-api/*`, and `/admin/analytics.html` on the custom domains.
+11. Run `AWS OIDC Smoke` against a `prod` environment-scoped role.
+12. Review the optional Terraform plan artifact from `Push Main` when it is available, then approve the protected `prod` environment.
+13. Let the gated `Push Main` workflow always run Terraform plan/apply against the production stack and deploy the generated site; it reads `site_bucket_name`, `cloudfront_distribution_id`, and analytics runtime config outputs from Terraform remote state, so separate production bucket/distribution variables are not required.
 
 ## Style Direction
 
