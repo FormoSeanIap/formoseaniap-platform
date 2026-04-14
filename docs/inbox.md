@@ -36,6 +36,14 @@ Use this file for fast, low-friction capture when an idea appears before it is r
     - [ ] Document the pivot: adding subcategories to make browsing and filtering usable
     - [ ] Write down the rules you ended up using (how you map language variants, series, and category/subcategory in metadata)
     - [ ] Call out how AI plan mode helped (breaking the problem into decisions, tradeoffs, and a step-by-step migration plan)
+  - Infra choice and cost control
+    - [ ] Explain why AWS was the right fit for this platform (familiarity, full control, existing mental model)
+    - [ ] Describe the cost concern and why that mattered early, not after launch
+    - [ ] Note the cost alarm you added so you can catch accidental spending before it grows
+    - [ ] Summarize how AI + AWS docs helped you compare options and converge on the cheapest workable setup
+    - [ ] Mention the CloudFront Flat-rate pricing plans as the standout option for cost control
+    - [ ] Explain the Terraform limitation: the AWS Go SDK does not support that CloudFront pricing mode yet, so part of the rollout has to be done manually in the AWS console
+    - [ ] Add a short note about the tradeoff: infra as code for most of the stack, with one deliberate manual step until the toolchain catches up
   - Podcast CORS issue (fetching RSS/content)
     - [ ] Describe the exact browser error and constraints (cross-origin fetch from a static site)
     - [ ] Summarize the initial AI-proposed solution (why it was plausible, what assumptions it made)
