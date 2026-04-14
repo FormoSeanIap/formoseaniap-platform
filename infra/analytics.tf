@@ -1,12 +1,15 @@
 locals {
-  analytics_api_origin_id    = "${local.name_prefix}-analytics-api"
-  analytics_api_name         = "${local.name_prefix}-analytics-api"
-  analytics_admin_group_name = var.analytics_admin_group_name
-  analytics_admin_path       = "/admin/analytics.html"
+  analytics_api_origin_id       = "${local.name_prefix}-analytics-api"
+  analytics_api_name            = "${local.name_prefix}-analytics-api"
+  analytics_admin_group_name    = var.analytics_admin_group_name
+  analytics_admin_path          = "/admin/analytics.html"
+  analytics_admin_function_name = "${local.name_prefix}-analytics-admin"
+  analytics_alarm_topic_name    = "${local.name_prefix}-analytics-lambda-alarms"
   analytics_backend_source_files = {
     for path in sort(fileset("${path.module}/../analytics_backend", "**/*.py")) :
     path => path
   }
+  analytics_collector_function_name = "${local.name_prefix}-analytics-collector"
   analytics_cognito_prefix_domain_name = (
     var.analytics_cognito_domain_prefix != ""
     ? var.analytics_cognito_domain_prefix
@@ -40,6 +43,21 @@ locals {
       redirect_path = local.analytics_admin_path
       scopes        = ["openid", "email", "profile"]
       user_pool_id  = aws_cognito_user_pool.analytics.id
+    }
+  }
+  analytics_monitoring_dashboard_name = "${local.name_prefix}-analytics-backend"
+  analytics_monitored_lambdas = {
+    collector = {
+      alarm_name    = "${local.name_prefix}-analytics-collector-success-rate-low"
+      display_name  = "Analytics collector"
+      function_name = local.analytics_collector_function_name
+      order         = 0
+    }
+    admin = {
+      alarm_name    = "${local.name_prefix}-analytics-admin-success-rate-low"
+      display_name  = "Analytics admin"
+      function_name = local.analytics_admin_function_name
+      order         = 1
     }
   }
 }
@@ -191,10 +209,10 @@ resource "aws_iam_role_policy" "analytics_lambda_dynamodb" {
 
 resource "aws_lambda_function" "analytics_collector" {
   filename         = data.archive_file.analytics_backend.output_path
-  function_name    = "${local.name_prefix}-analytics-collector"
+  function_name    = local.analytics_collector_function_name
   handler          = "analytics_backend.collector_lambda.handler"
   role             = aws_iam_role.analytics_lambda.arn
-  runtime          = "python3.13"
+  runtime          = "python3.14"
   source_code_hash = data.archive_file.analytics_backend.output_base64sha256
   timeout          = 10
 
@@ -213,10 +231,10 @@ resource "aws_lambda_function" "analytics_collector" {
 
 resource "aws_lambda_function" "analytics_admin" {
   filename         = data.archive_file.analytics_backend.output_path
-  function_name    = "${local.name_prefix}-analytics-admin"
+  function_name    = local.analytics_admin_function_name
   handler          = "analytics_backend.admin_lambda.handler"
   role             = aws_iam_role.analytics_lambda.arn
-  runtime          = "python3.13"
+  runtime          = "python3.14"
   source_code_hash = data.archive_file.analytics_backend.output_base64sha256
   timeout          = 15
 
@@ -231,6 +249,149 @@ resource "aws_lambda_function" "analytics_admin" {
   }
 
   tags = local.tags
+}
+
+resource "aws_sns_topic" "analytics_lambda_alarms" {
+  name = local.analytics_alarm_topic_name
+
+  tags = merge(local.tags, {
+    Name = local.analytics_alarm_topic_name
+  })
+}
+
+resource "aws_sns_topic_subscription" "analytics_lambda_alarm_email" {
+  topic_arn = aws_sns_topic.analytics_lambda_alarms.arn
+  protocol  = "email"
+  endpoint  = var.analytics_alarm_email
+}
+
+resource "aws_cloudwatch_metric_alarm" "analytics_lambda_success_rate_low" {
+  for_each = local.analytics_monitored_lambdas
+
+  alarm_name          = each.value.alarm_name
+  alarm_description   = "Alerts when ${each.value.display_name} success rate falls below 95% for 2 of 3 one-minute periods."
+  comparison_operator = "LessThanThreshold"
+  evaluation_periods  = 3
+  datapoints_to_alarm = 2
+  threshold           = 95
+  treat_missing_data  = "notBreaching"
+  alarm_actions       = [aws_sns_topic.analytics_lambda_alarms.arn]
+
+  metric_query {
+    id          = "errors"
+    label       = "Errors"
+    return_data = false
+
+    metric {
+      metric_name = "Errors"
+      namespace   = "AWS/Lambda"
+      period      = 60
+      stat        = "Sum"
+
+      dimensions = {
+        FunctionName = each.value.function_name
+      }
+    }
+  }
+
+  metric_query {
+    id          = "invocations"
+    label       = "Invocations"
+    return_data = false
+
+    metric {
+      metric_name = "Invocations"
+      namespace   = "AWS/Lambda"
+      period      = 60
+      stat        = "Sum"
+
+      dimensions = {
+        FunctionName = each.value.function_name
+      }
+    }
+  }
+
+  metric_query {
+    id          = "success_rate"
+    expression  = "100 - 100 * errors / MAX([errors, invocations])"
+    label       = "Success rate"
+    return_data = true
+  }
+
+  tags = merge(local.tags, {
+    Name = each.value.alarm_name
+  })
+}
+
+resource "aws_cloudwatch_dashboard" "analytics_backend" {
+  dashboard_name = local.analytics_monitoring_dashboard_name
+  dashboard_body = jsonencode(
+    {
+      widgets = [
+        for lambda_key, lambda_details in local.analytics_monitored_lambdas : {
+          type   = "metric"
+          x      = 0
+          y      = lambda_details.order * 6
+          width  = 24
+          height = 6
+
+          properties = {
+            title   = "${lambda_details.display_name} - errors and success rate"
+            region  = var.aws_region
+            period  = 60
+            view    = "timeSeries"
+            stacked = false
+            metrics = [
+              [
+                "AWS/Lambda",
+                "Errors",
+                "FunctionName",
+                lambda_details.function_name,
+                {
+                  id    = "errors"
+                  stat  = "Sum"
+                  color = "#ba2e0f"
+                  label = "Errors"
+                },
+              ],
+              [
+                ".",
+                "Invocations",
+                ".",
+                ".",
+                {
+                  id      = "invocations"
+                  stat    = "Sum"
+                  visible = false
+                },
+              ],
+              [
+                {
+                  id         = "successRate"
+                  expression = "100 - 100 * errors / MAX([errors, invocations])"
+                  label      = "Success rate"
+                  yAxis      = "right"
+                },
+              ],
+            ]
+            yAxis = {
+              left = {
+                min       = 0
+                label     = "Count"
+                showUnits = false
+              }
+              right = {
+                min       = 0
+                max       = 100
+                label     = "%"
+                showUnits = false
+              }
+            }
+          }
+        }
+      ]
+    }
+  )
 }
 
 resource "aws_cognito_user_pool" "analytics" {

@@ -43,7 +43,12 @@ jobs:
       - name: Check out repository
         uses: actions/checkout@v6
 
+      - name: Note Terraform plan status when analytics alarm email is not configured
+        if: ${{ vars.TF_VAR_ANALYTICS_ALARM_EMAIL == '' }}
+        run: echo "Set TF_VAR_ANALYTICS_ALARM_EMAIL repo variable to enable Terraform plan runs for analytics Lambda monitoring changes." >> "$GITHUB_STEP_SUMMARY"
+
       - name: Run shared Terraform plan
+        if: ${{ vars.TF_VAR_ANALYTICS_ALARM_EMAIL != '' }}
         uses: ./.github/actions/terraform-plan
         with:
           aws_region: ${{ vars.AWS_REGION }}
@@ -53,6 +58,8 @@ jobs:
           summary_message: Set AWS_REGION and AWS_TERRAFORM_PLAN_ROLE_ARN repo variables to enable terraform plan runs.
           upload_plan_artifact: "true"
           plan_artifact_name: terraform-plan-${{ github.event.pull_request.number }}
+        env:
+          TF_VAR_analytics_alarm_email: ${{ vars.TF_VAR_ANALYTICS_ALARM_EMAIL }}
 
   preview_ready:
     needs:

@@ -44,7 +44,7 @@ jobs:
         uses: actions/checkout@v6
 
       - name: Run shared Terraform plan
-        if: ${{ needs.terraform_validate.outputs.has_tf_root == 'true' }}
+        if: ${{ needs.terraform_validate.outputs.has_tf_root == 'true' && vars.TF_VAR_ANALYTICS_ALARM_EMAIL != '' }}
         uses: ./.github/actions/terraform-plan
         with:
           aws_region: ${{ vars.AWS_REGION }}
@@ -54,26 +54,34 @@ jobs:
           summary_message: Set AWS_REGION and AWS_TERRAFORM_PLAN_ROLE_ARN repo variables to enable pre-promotion Terraform plan artifacts on main pushes.
           upload_plan_artifact: "true"
           plan_artifact_name: terraform-plan-main-${{ github.run_id }}
+        env:
+          TF_VAR_analytics_alarm_email: ${{ vars.TF_VAR_ANALYTICS_ALARM_EMAIL }}
 
       - name: Note production promotion status when Terraform root is missing
         if: ${{ needs.terraform_validate.outputs.has_tf_root != 'true' }}
         run: echo "Production promotion skipped because no Terraform root exists under infra/." >> "$GITHUB_STEP_SUMMARY"
 
+      - name: Note Terraform plan status when analytics alarm email is not configured
+        if: ${{ needs.terraform_validate.outputs.has_tf_root == 'true' && vars.TF_VAR_ANALYTICS_ALARM_EMAIL == '' }}
+        run: echo "Set TF_VAR_ANALYTICS_ALARM_EMAIL repo variable to enable Terraform plan artifacts for analytics Lambda monitoring changes." >> "$GITHUB_STEP_SUMMARY"
+
       - name: Note production promotion status when deploy credentials are not configured
-        if: ${{ needs.terraform_validate.outputs.has_tf_root == 'true' && (vars.AWS_REGION == '' || vars.AWS_TERRAFORM_APPLY_ROLE_ARN == '' || vars.AWS_PROD_ROLE_ARN == '') }}
-        run: echo "Set AWS_REGION, AWS_TERRAFORM_APPLY_ROLE_ARN, and AWS_PROD_ROLE_ARN repo variables to enable production promotion from main." >> "$GITHUB_STEP_SUMMARY"
+        if: ${{ needs.terraform_validate.outputs.has_tf_root == 'true' && (vars.AWS_REGION == '' || vars.AWS_TERRAFORM_APPLY_ROLE_ARN == '' || vars.AWS_PROD_ROLE_ARN == '' || vars.TF_VAR_ANALYTICS_ALARM_EMAIL == '') }}
+        run: echo "Set AWS_REGION, AWS_TERRAFORM_APPLY_ROLE_ARN, AWS_PROD_ROLE_ARN, and TF_VAR_ANALYTICS_ALARM_EMAIL repo variables to enable production promotion from main." >> "$GITHUB_STEP_SUMMARY"
 
   promote_prod:
     needs:
       - validate
       - terraform_validate
       - terraform_plan
-    if: ${{ needs.terraform_validate.outputs.has_tf_root == 'true' && vars.AWS_REGION != '' && vars.AWS_TERRAFORM_APPLY_ROLE_ARN != '' && vars.AWS_PROD_ROLE_ARN != '' }}
+    if: ${{ needs.terraform_validate.outputs.has_tf_root == 'true' && vars.AWS_REGION != '' && vars.AWS_TERRAFORM_APPLY_ROLE_ARN != '' && vars.AWS_PROD_ROLE_ARN != '' && vars.TF_VAR_ANALYTICS_ALARM_EMAIL != '' }}
     runs-on: ubuntu-latest
     environment: prod
     defaults:
       run:
         shell: bash
+    env:
+      TF_VAR_analytics_alarm_email: ${{ vars.TF_VAR_ANALYTICS_ALARM_EMAIL }}
 
     steps:
       - name: Check out repository

@@ -26,6 +26,8 @@ Current production stack:
 - Creates a private analytics backend made of:
   - Lambda collector/admin handlers
   - DynamoDB daily counters + daily uniqueness tables
+  - SNS-backed success-rate alarms for the analytics Lambdas
+  - CloudWatch dashboard for analytics backend monitoring
   - Cognito User Pool, App Client, hosted-login domain, `analytics-admin` group, and managed-login configuration for username-based admin login
 - Creates the Route 53 public hosted zone for `formoseaniap.com` as the future authoritative zone once the registrar and DNS move are possible.
 - Includes the full custom-domain infrastructure in the default stack:
@@ -43,11 +45,13 @@ Important staged variables:
 - `site_root_domain` defaults to `formoseaniap.com`.
 - `site_canonical_subdomain` defaults to `www`.
 - `analytics_auth_subdomain` defaults to `auth`.
+- `analytics_alarm_email` must be provided for Terraform plan/apply, typically via GitHub repository variable `TF_VAR_ANALYTICS_ALARM_EMAIL`.
 
 Important outputs:
 
 - `site_bucket_name`
 - `cloudfront_distribution_id`
+- `analytics_monitoring_dashboard_name`
 - `analytics_runtime_config`
 - `manual_dns_prerequisites`
 - `manual_dns_validation_records`
@@ -100,6 +104,7 @@ Analytics auth notes:
   - `https://www.formoseaniap.com` after the full custom-domain apply succeeds
 - The browser-facing `analytics_runtime_config` JSON contract stays stable. Only the deployed values change between rollout stages.
 - Terraform provisions the user pool, app client, domain, branding, and admin group, but does not create the first admin user.
+- Terraform also provisions the SNS topic and email subscription request for analytics Lambda alarms; the recipient must confirm the AWS subscription email before notifications are delivered.
 - After apply, manually create the admin user with `username`, `name`, and `email`, then add that user to the `analytics-admin` Cognito group before testing `/admin/analytics.html`.
 - Rebuilding the analytics user pool is a direct cutover: existing admin sessions become invalid and the admin user must be bootstrapped again in the replacement pool.
 

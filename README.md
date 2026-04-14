@@ -42,7 +42,8 @@ Implemented:
   - AWS-managed CloudFront cache policies only, so the distribution can later be moved to a Free/Pro flat-rate plan from the AWS console
   - CloudFront `/podcasts/*` behavior routed to the SoundOn RSS origin for same-origin browser fetches
   - CloudFront `/analytics-api/*` behavior routed to an API Gateway HTTP API for same-origin analytics collection and admin reads
-  - Lambda-backed analytics collector/admin handlers with DynamoDB daily counters + uniqueness state
+  - Lambda-backed analytics collector/admin handlers on Python 3.14 with DynamoDB daily counters + uniqueness state
+  - CloudWatch success-rate alarms for the analytics Lambdas with SNS email notifications and a dedicated CloudWatch dashboard
   - Route 53 hosted zone foundation for `formoseaniap.com`, ready for a future registrar or DNS-authority transfer
   - Custom-domain infrastructure for `www.formoseaniap.com` with manual external-DNS validation/cutover outputs, apex redirect, and a CloudFront viewer-request redirect function
   - Cognito managed-login redirect flow for the private analytics admin page, with username-based sign-in, `ESSENTIALS` user-pool tier, and a separate full-name display attribute
@@ -523,8 +524,10 @@ Important:
 - The production stack creates the private site bucket and CloudFront distribution; the production deploy workflow reads output `site_bucket_name` and output `cloudfront_distribution_id` from Terraform remote state at run time.
 - The production stack also creates the private analytics backend:
   - API Gateway HTTP API
-  - Lambda collector/admin functions
+  - Lambda collector/admin functions on Python 3.14
   - DynamoDB daily counter and uniqueness tables
+  - SNS-backed success-rate alarms for the analytics Lambdas
+  - CloudWatch dashboard for analytics backend monitoring
   - Cognito User Pool, App Client, hosted-login domain, and `analytics-admin` group for username-based admin login
 - The production stack now also creates the Route 53 public hosted zone for `formoseaniap.com` as the future authoritative zone when the registrar and DNS move are possible.
 - The default Terraform design includes the full custom-domain infrastructure:
@@ -548,7 +551,7 @@ Resume AWS rollout from these steps:
 1. Create the GitHub Actions OIDC identity provider in AWS if it does not already exist.
 2. Create the IAM roles and policies from `docs/aws-oidc-github-actions.md`.
 3. Use `docs/examples/aws-oidc-trust-policy-plan-and-output.json` for the Terraform plan role, because PRs and main-branch pre-promotion plans still use a read-only role.
-4. Set GitHub repository variables: `AWS_REGION`, `AWS_TERRAFORM_PLAN_ROLE_ARN`, `AWS_TERRAFORM_APPLY_ROLE_ARN`, and `AWS_PROD_ROLE_ARN`.
+4. Set GitHub repository variables: `AWS_REGION`, `AWS_TERRAFORM_PLAN_ROLE_ARN`, `AWS_TERRAFORM_APPLY_ROLE_ARN`, `AWS_PROD_ROLE_ARN`, and `TF_VAR_ANALYTICS_ALARM_EMAIL`.
 5. Run a plain `terraform apply` so Terraform creates the hosted zone, requests the ACM certificates, and starts the full custom-domain infrastructure rollout.
 6. If that first apply stops at ACM validation, read `manual_dns_validation_records` and `manual_dns_prerequisites` from Terraform output or state, then create those validation `CNAME`s at the live DNS provider. Before Cognito can create `auth.formoseaniap.com`, AWS requires the parent domain `formoseaniap.com` to resolve through a real public `A` record. If Cloudflare is still authoritative, do not rely only on proxying or apex CNAME flattening for this step; create a temporary `DNS only` apex `A` record, rerun apply until the Cognito custom domain succeeds, and then replace that temporary record with the final site cutover record.
 7. Rerun the same plain `terraform apply` after ACM validation has propagated so Terraform can validate the certificates, attach the site aliases, create the canonical-host redirect function, and create `https://auth.formoseaniap.com` plus its branding.
@@ -558,6 +561,7 @@ Resume AWS rollout from these steps:
 11. Run `AWS OIDC Smoke` against a `prod` environment-scoped role.
 12. Review the optional Terraform plan artifact from `Push Main` when it is available, then approve the protected `prod` environment.
 13. Let the gated `Push Main` workflow always run Terraform plan/apply against the production stack and deploy the generated site; it reads `site_bucket_name`, `cloudfront_distribution_id`, and analytics runtime config outputs from Terraform remote state, so separate production bucket/distribution variables are not required.
+14. After the monitoring resources are first applied, confirm the SNS email subscription sent to `TF_VAR_ANALYTICS_ALARM_EMAIL`, then verify the CloudWatch alarms and dashboard.
 
 ## Style Direction
 

@@ -4,6 +4,11 @@ variable "analytics_admin_group_name" {
   type        = string
 }
 
+variable "analytics_alarm_email" {
+  description = "Email address subscribed to analytics backend Lambda alarm notifications."
+  type        = string
+}
+
 variable "analytics_api_cache_policy_id" {
   default     = "4135ea2d-6df8-44a3-9df3-4b5a84be39ad"
   description = "CloudFront cache policy ID for analytics API responses. Defaults to AWS-managed CachingDisabled."
