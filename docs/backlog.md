@@ -8,15 +8,15 @@ Curated follow-up work for the portfolio platform.
 
 ## Next
 
-- [ ] Deploy the podcast feed route
-  - Why: SoundOn RSS feeds are reachable by `curl` but not directly by browser `fetch()` because the feed responses do not expose permissive CORS headers.
-  - Scope: configure CloudFront to route `site/data/podcasts.shows.json.feed_proxy_path` requests to the SoundOn RSS origin, keep the local `proxy_url` path for preview/Lambda-compatible testing, and verify both localhost and deployed-site refresh behavior.
-  - Done when: `podcasts.html` and the home teaser load live episodes through same-origin CloudFront feed paths in production without direct browser-to-SoundOn fetches.
+- [ ] Fix the backend analytics collector Lambda
+  - Why: the backend Lambda that sends platform analytics is currently failing or unreliable, which means analytics data cannot be trusted until the collector path is repaired.
+  - Scope: inspect the current Lambda handler, identify the failure mode, fix the analytics submission flow, and verify that expected analytics events are emitted successfully without breaking the rest of the backend path.
+  - Done when: the analytics collector Lambda runs without the known error and platform analytics are recorded successfully in the intended destination.
 
-- [ ] Populate podcast platform links
-  - Why: SoundOn links are configured, but Spotify, Apple Podcasts, and KKBOX URLs are still blank.
-  - Scope: update `site/data/podcasts.shows.json` for each show and verify the buttons render on `podcasts.html`.
-  - Done when: each show card exposes the intended listening destinations.
+- [ ] Add backend Lambda monitoring with email alarms
+  - Why: backend failures should be detected automatically instead of waiting for manual checks, especially for the analytics collector and other Lambda-backed functionality.
+  - Scope: define the key Lambda CloudWatch metrics to monitor, create alarms for error conditions, wire the alarms to an email notification path such as SNS, and verify that alarm delivery works end to end.
+  - Done when: Lambda error metrics trigger CloudWatch alarms and an email notification is delivered to the configured recipient when a backend issue is detected.
 
 - [ ] Run `terraform plan` on normal pushes when infra files change
   - Why: today `push-others.yml` only calls `_terraform-validate-shared.yml` (local `fmt`/`init`/`validate`). The actual `terraform plan` — which catches IAM permission errors, missing resources, and provider bugs — only runs inside `pr-validate.yml`. This means infra breakages are not surfaced until a PR is opened.
@@ -31,7 +31,12 @@ Curated follow-up work for the portfolio platform.
 
 ## Later
 
-- [ ] Add custom domain for the production site
-  - Why: the site will eventually need a branded public hostname instead of the default CloudFront domain.
-  - Scope: buy the domain, request the viewer certificate in ACM `us-east-1`, add the Route 53 hosted zone and alias records, attach the certificate and aliases to the CloudFront distribution, and update any deploy/runtime configuration that currently assumes provider-generated URLs.
-  - Done when: the production site is reachable on the purchased domain over HTTPS and the old CloudFront hostname is no longer the primary public entrypoint.
+- [ ] Complete the `formoseaniap.com` cutover while Cloudflare remains authoritative
+  - Why: the infrastructure now supports the branded production hostname, but Cloudflare must stay as the live DNS provider until the new-domain transfer lock expires.
+  - Scope: run a plain `terraform apply`, create the ACM validation records manually in Cloudflare from the Terraform manual-DNS outputs if the first apply stops at validation, rerun the same plain apply, then add the final cutover records in Cloudflare, verifying `www` as the canonical host plus apex and legacy CloudFront redirects.
+  - Done when: `https://www.formoseaniap.com` is the canonical public site, `https://formoseaniap.com` and the old CloudFront hostname redirect there, and `https://auth.formoseaniap.com` is serving Cognito managed login for the admin flow while Cloudflare remains the live DNS authority.
+
+- [ ] Transfer `formoseaniap.com` DNS authority to Route 53 and then enable DNSSEC
+  - Why: the current Cloudflare-authoritative setup requires manual DNS mirroring; after the transfer hold expires, Route 53 should become the single source of truth and DNSSEC can be enabled there cleanly.
+  - Scope: once the registrar lock window allows it, move nameserver control or the registrar itself so Route 53 becomes authoritative, remove the need to mirror records into Cloudflare, then design and implement DNSSEC as a follow-up in the now-authoritative Route 53 setup.
+  - Done when: Route 53 is authoritative for `formoseaniap.com`, the live DNS records are served directly from the Terraform-managed hosted zone, and DNSSEC validates publicly without depending on manual Cloudflare DNS mirroring.

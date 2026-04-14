@@ -1,0 +1,14 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 640 160">
+  <defs>
+    <linearGradient id="ink" x1="0" x2="1" y1="0" y2="0">
+      <stop offset="0%" stop-color="#17120d" />
+      <stop offset="100%" stop-color="#7a6148" />
+    </linearGradient>
+  </defs>
+  <rect width="640" height="160" rx="28" fill="#fffaf3" fill-opacity="0.92" />
+  <circle cx="82" cy="80" r="40" fill="url(#ink)" />
+  <path d="M58 102c9-28 28-47 58-56" fill="none" stroke="#fffaf3" stroke-linecap="round" stroke-width="6" />
+  <text x="64" y="91" fill="#fffaf3" font-family="Georgia, serif" font-size="28" font-weight="700">SI</text>
+  <text x="152" y="76" fill="#17120d" font-family="Georgia, serif" font-size="34" font-weight="700">Seng-Gan Iap</text>
+  <text x="152" y="108" fill="#64584d" font-family="Verdana, sans-serif" font-size="20" letter-spacing="1.5">private analytics access</text>
+</svg>
