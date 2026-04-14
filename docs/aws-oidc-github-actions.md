@@ -13,7 +13,7 @@ Use it to validate that GitHub Actions can assume an AWS IAM role through OIDC w
 ## Recommended Role Split
 
 - `formoseaniap-platform-gha-deploy-prod`: production site deploy role scoped to the `prod` GitHub environment
-- `formoseaniap-platform-gha-terraform-plan`: read-only Terraform plan role scoped to PR plans and pre-promotion plans on `main`
+- `formoseaniap-platform-gha-terraform-plan`: read-only Terraform plan role scoped to PR plans, push-triggered plans on `develop` and work branches, and pre-promotion plans on `main`
 - `formoseaniap-platform-gha-terraform-apply-prod`: production Terraform apply role scoped to the `prod` GitHub environment
 - `formoseaniap-platform-gha-preview`: optional future preview deploy role scoped to the `preview` GitHub environment
 
@@ -36,7 +36,7 @@ Keep the local AWS MCP role separate from GitHub Actions roles.
 - `docs/examples/aws-oidc-trust-policy-pull-request.json`
   Use this for jobs that only need PR-triggered OIDC without a GitHub environment.
 - `docs/examples/aws-oidc-trust-policy-plan-and-output.json`
-  Use this for `formoseaniap-platform-gha-terraform-plan`, which runs Terraform plan from PR-triggered jobs and pre-promotion plan jobs on `main`.
+  Use this for `formoseaniap-platform-gha-terraform-plan`, which runs Terraform plan from PR-triggered jobs, push-triggered jobs on `develop` and work branches, and pre-promotion plan jobs on `main`.
 
 The trust policy examples are prefilled for:
 
@@ -73,6 +73,8 @@ That is enough to verify the trust policy and the GitHub-side `id-token: write` 
   Manual bootstrap check for OIDC trust and AWS role assumption. The workflow now accepts a `github_environment` input and defaults to `prod`, so it can test environment-scoped roles.
 - `pr-validate.yml`
   PR validation plus optional preview deploy and optional Terraform plan. The workflow runs shared Terraform validation first, and preview waits for the Terraform PR checks to complete. Because the preview deploy job uses the `preview` environment, the OIDC subject should be environment-scoped. The Terraform plan job does not use a GitHub environment, so its OIDC subject remains `pull_request`.
+- `push-others.yml`
+  Push validation on `develop` and work branches. The workflow runs shared Terraform validation first and then runs a live-state Terraform plan when Terraform files changed and the read-only plan role is configured. Its OIDC subject is the pushed branch ref, so the plan-role trust policy must allow the full `push-others` branch set.
 - `push-main.yml`
   Production promotion from `main`. It re-runs the shared site validation path, reuses the shared Terraform validation path for changed Terraform files, can publish a pre-promotion Terraform plan artifact through the read-only plan role, then waits on the protected `prod` environment before always running Terraform plan/apply with the production apply role and deploying the site with the production deploy role.
 ## GitHub Variables Expected By The Workflows

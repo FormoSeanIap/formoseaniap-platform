@@ -72,7 +72,7 @@ Implemented:
   - JSON-driven frontend pages (`site/articles.html`, `site/article.html`)
   - JSON-driven Projects page (`site/projects.html`)
   - Project case-study cards support featured entries, status badges, highlight lists, and optional private-repo notes via `site/data/projects.json`
-  - GitHub Actions scaffolding for work-branch and long-lived branch push validation, PR validation with previews, and `main`-gated production promotion for site and Terraform changes under `infra/`
+  - GitHub Actions scaffolding for work-branch and long-lived branch push validation, push-time Terraform plan on infra changes, PR validation with previews, and `main`-gated production promotion for site and Terraform changes under `infra/`
 
 ## Architecture
 
@@ -98,6 +98,7 @@ Build-time flow:
   - dependabot.yml             Dependabot config for GitHub Actions + Terraform updates
   - actions/
     - site-validate/action.yml   shared site validation steps for PR/push/main workflows
+    - terraform-plan/action.yml  shared Terraform plan steps for push/PR/main workflows
   - workflows/
     - aws-oidc-smoke.yml        manual GitHub OIDC -> AWS trust smoke test
     - _terraform-validate-shared.yml reusable Terraform change detection + validation
@@ -192,7 +193,7 @@ Build-time flow:
 ## AWS OIDC Bootstrap
 
 - `./.github/workflows/aws-oidc-smoke.yml` is a manual GitHub Actions workflow that validates GitHub OIDC -> AWS role assumption with `aws sts get-caller-identity`.
-- `./docs/aws-oidc-github-actions.md` explains the role split and the bootstrap sequence for moving this repo onto AWS via GitHub Actions.
+- `./docs/aws-oidc-github-actions.md` explains the role split, trust-policy expectations, and the bootstrap sequence for moving this repo onto AWS via GitHub Actions.
 - `./docs/examples/aws-oidc-trust-policy-branch.json`, `./docs/examples/aws-oidc-trust-policy-environment.json`, `./docs/examples/aws-oidc-trust-policy-plan-and-output.json`, and `./docs/examples/aws-oidc-trust-policy-pull-request.json` provide branch-scoped, environment-scoped, main/PR plan, and PR-scoped IAM trust policy templates.
 
 ## Git Workflow
@@ -208,7 +209,7 @@ Build-time flow:
 
 ## CI/CD Workflow
 
-- `./.github/workflows/push-others.yml` runs unit tests, rebuilds generated site artifacts, fails on generated-artifact drift, and adds push-safe Terraform validation when Terraform-related files changed on `feature/*`, `fix/*`, `chore/*`, `docs/*`, `hotfix/*`, and `develop`.
+- `./.github/workflows/push-others.yml` runs unit tests, rebuilds generated site artifacts, fails on generated-artifact drift, and adds shared Terraform validation plus live-state Terraform plan when Terraform-related files changed on `feature/*`, `fix/*`, `chore/*`, `docs/*`, `hotfix/*`, and `develop`.
 - `./.github/workflows/pr-validate.yml` runs unit tests, rebuilds generated site artifacts, fails if generated outputs are out of date, uploads a preview artifact, performs shared Terraform validation plus an optional OIDC-backed Terraform plan when infra files changed, and only proceeds to preview status/deploy after the Terraform PR checks are complete.
 - `./.github/workflows/push-main.yml` re-runs the same validation path on `main`, can publish a pre-promotion Terraform plan artifact when the read-only plan role is configured, and waits at the protected `prod` environment before always running Terraform plan/apply against the production state, reading production outputs from remote state, and deploying the generated `site/` output.
 - On successful production promotion, `Push Main` also writes the live analytics runtime config JSON into the built site artifact before syncing to S3 so the admin page gets the current Cognito/client settings without hard-coding them in the repo.

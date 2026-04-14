@@ -12,6 +12,7 @@ on:
 
 permissions:
   contents: read
+  id-token: write
 
 concurrency:
   group: push-validate-${{ github.ref }}
@@ -33,3 +34,22 @@ jobs:
     with:
       compare_base_sha: ${{ github.event.before }}
       compare_head_sha: ${{ github.sha }}
+
+  terraform_plan:
+    needs: terraform_validate
+    if: ${{ needs.terraform_validate.outputs.has_tf_changes == 'true' && needs.terraform_validate.outputs.has_tf_root == 'true' }}
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v5
+
+      - name: Run shared Terraform plan
+        uses: ./.github/actions/terraform-plan
+        with:
+          aws_region: ${{ vars.AWS_REGION }}
+          role_arn: ${{ vars.AWS_TERRAFORM_PLAN_ROLE_ARN }}
+          role_session_name: gha-terraform-plan-push-${{ github.run_number }}
+          emit_unconfigured_summary: "true"
+          summary_message: Set AWS_REGION and AWS_TERRAFORM_PLAN_ROLE_ARN repo variables to enable terraform plan runs on push validation.
+          upload_plan_artifact: "false"
