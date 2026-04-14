@@ -28,6 +28,11 @@ output "analytics_public_site_base_url" {
   value       = local.analytics_public_site_base_url
 }
 
+output "analytics_monitoring_dashboard_name" {
+  description = "CloudWatch dashboard name for analytics backend Lambda monitoring."
+  value       = local.analytics_monitoring_dashboard_name
+}
+
 output "analytics_runtime_config" {
   description = "Production runtime config for the static analytics admin page."
   value       = local.analytics_runtime_config

@@ -97,6 +97,7 @@
       "Effect": "Allow",
       "Action": [
         "apigateway:*",
+        "cloudwatch:*",
         "cognito-idp:*",
         "dynamodb:*",
         "iam:AttachRolePolicy",
@@ -116,7 +117,8 @@
         "iam:TagRole",
         "iam:UntagRole",
         "iam:UpdateRole",
-        "lambda:*"
+        "lambda:*",
+        "sns:*"
       ],
       "Resource": "*"
     }

@@ -45,6 +45,10 @@
         "acm:ListCertificates",
         "acm:ListTagsForCertificate",
         "apigateway:GET",
+        "cloudwatch:Describe*",
+        "cloudwatch:GetDashboard",
+        "cloudwatch:List*",
+        "cloudwatch:ListTagsForResource",
         "cloudfront:Describe*",
         "cloudfront:Get*",
         "cloudfront:List*",
@@ -71,6 +75,8 @@
         "route53:ListTagsForResource",
         "s3:Get*",
         "s3:List*",
+        "sns:Get*",
+        "sns:List*",
         "sts:GetCallerIdentity"
       ],
       "Resource": "*"
