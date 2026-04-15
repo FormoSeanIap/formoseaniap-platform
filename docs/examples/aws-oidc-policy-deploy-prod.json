@@ -8,7 +8,7 @@
         "s3:GetBucketLocation",
         "s3:ListBucket"
       ],
-      "Resource": "arn:aws:s3:::formoseaniap-platform-prod-site-760259504838-ap-northeast-1"
+      "Resource": "arn:aws:s3:::<site-bucket-name>"
     },
     {
       "Sid": "DeploySiteObjects",
@@ -18,7 +18,7 @@
         "s3:GetObject",
         "s3:PutObject"
       ],
-      "Resource": "arn:aws:s3:::formoseaniap-platform-prod-site-760259504838-ap-northeast-1/*"
+      "Resource": "arn:aws:s3:::<site-bucket-name>/*"
     },
     {
       "Sid": "InvalidateCloudFront",
@@ -27,7 +27,7 @@
         "cloudfront:CreateInvalidation",
         "cloudfront:GetInvalidation"
       ],
-      "Resource": "arn:aws:cloudfront::760259504838:distribution/*"
+      "Resource": "arn:aws:cloudfront::<aws-account-id>:distribution/*"
     }
   ]
 }

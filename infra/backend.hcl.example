@@ -1,0 +1,3 @@
+# Copy this file to `infra/backend.hcl` and replace the placeholder value
+# before running `terraform init -backend-config=backend.hcl`.
+bucket = "replace-with-your-terraform-state-bucket"

@@ -55,9 +55,9 @@ When a local merge is pushed directly to a work branch or `develop`, `Push Other
 Set these as GitHub repository variables when the AWS side is ready:
 
 - `AWS_REGION`: `ap-northeast-1`
-- `AWS_PROD_ROLE_ARN`: `arn:aws:iam::760259504838:role/formoseaniap-platform-gha-deploy-prod`
-- `AWS_TERRAFORM_PLAN_ROLE_ARN`: `arn:aws:iam::760259504838:role/formoseaniap-platform-gha-terraform-plan`
-- `AWS_TERRAFORM_APPLY_ROLE_ARN`: `arn:aws:iam::760259504838:role/formoseaniap-platform-gha-terraform-apply-prod`
+- `AWS_PROD_ROLE_ARN`: ARN for the production deploy role
+- `AWS_TERRAFORM_PLAN_ROLE_ARN`: ARN for the read-only Terraform plan role
+- `AWS_TERRAFORM_APPLY_ROLE_ARN`: ARN for the production Terraform apply role
 - `AWS_PREVIEW_ROLE_ARN` (optional)
 - `PREVIEW_S3_BUCKET` (optional)
 - `PREVIEW_BASE_URL` (optional)

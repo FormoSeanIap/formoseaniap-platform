@@ -5,7 +5,7 @@
       "Sid": "AllowTerraformPlanAndOutputJobs",
       "Effect": "Allow",
       "Principal": {
-        "Federated": "arn:aws:iam::760259504838:oidc-provider/token.actions.githubusercontent.com"
+        "Federated": "arn:aws:iam::<aws-account-id>:oidc-provider/token.actions.githubusercontent.com"
       },
       "Action": "sts:AssumeRoleWithWebIdentity",
       "Condition": {
@@ -14,14 +14,14 @@
         },
         "StringLike": {
           "token.actions.githubusercontent.com:sub": [
-            "repo:FormoSeanIap/formoseaniap-platform:pull_request",
-            "repo:FormoSeanIap/formoseaniap-platform:ref:refs/heads/main",
-            "repo:FormoSeanIap/formoseaniap-platform:ref:refs/heads/develop",
-            "repo:FormoSeanIap/formoseaniap-platform:ref:refs/heads/feature/*",
-            "repo:FormoSeanIap/formoseaniap-platform:ref:refs/heads/fix/*",
-            "repo:FormoSeanIap/formoseaniap-platform:ref:refs/heads/chore/*",
-            "repo:FormoSeanIap/formoseaniap-platform:ref:refs/heads/docs/*",
-            "repo:FormoSeanIap/formoseaniap-platform:ref:refs/heads/hotfix/*"
+            "repo:<github-owner>/<repo-name>:pull_request",
+            "repo:<github-owner>/<repo-name>:ref:refs/heads/main",
+            "repo:<github-owner>/<repo-name>:ref:refs/heads/develop",
+            "repo:<github-owner>/<repo-name>:ref:refs/heads/feature/*",
+            "repo:<github-owner>/<repo-name>:ref:refs/heads/fix/*",
+            "repo:<github-owner>/<repo-name>:ref:refs/heads/chore/*",
+            "repo:<github-owner>/<repo-name>:ref:refs/heads/docs/*",
+            "repo:<github-owner>/<repo-name>:ref:refs/heads/hotfix/*"
           ]
         }
       }

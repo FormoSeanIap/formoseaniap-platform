@@ -13,7 +13,7 @@ Curated follow-up work for the portfolio platform.
 - [ ] Complete the `formoseaniap.com` cutover while Cloudflare remains authoritative
   - Why: the infrastructure now supports the branded production hostname, but Cloudflare must stay as the live DNS provider until the new-domain transfer lock expires.
   - Scope: run a plain `terraform apply`, create the ACM validation records manually in Cloudflare from the Terraform manual-DNS outputs if the first apply stops at validation, rerun the same plain apply, then add the final cutover records in Cloudflare, verifying `www` as the canonical host plus apex and legacy CloudFront redirects.
-  - Done when: `https://www.formoseaniap.com` is the canonical public site, `https://formoseaniap.com` and the old CloudFront hostname redirect there, and `https://auth.formoseaniap.com` is serving Cognito managed login for the admin flow while Cloudflare remains the live DNS authority.
+  - Done when: `https://www.formoseaniap.com` is the canonical public site, `https://formoseaniap.com` and the old CloudFront hostname redirect there, and the dedicated analytics auth subdomain is serving Cognito managed login while Cloudflare remains the live DNS authority.
 
 - [ ] Transfer `formoseaniap.com` DNS authority to Route 53 and then enable DNSSEC
   - Why: the current Cloudflare-authoritative setup requires manual DNS mirroring; after the transfer hold expires, Route 53 should become the single source of truth and DNSSEC can be enabled there cleanly.

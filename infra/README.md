@@ -7,7 +7,7 @@ Current convention:
 - Keep repository-managed Terraform under `infra/`.
 - Use one root stack in this directory until there is a concrete reason to split it.
 - The root stack currently targets the `hashicorp/aws` provider `~> 6.0`.
-- Store remote state in the existing S3 backend bucket `formoseaniap-platform-tfstate-760259504838-ap-northeast-1-an`.
+- Store remote state in an S3 backend configured locally through `infra/backend.hcl`.
 - Use pull requests into `develop` or `main` for `terraform fmt -check`, `terraform validate`, and optional `terraform plan`.
 - Let the protected `Push Main` workflow own production `terraform plan` / `terraform apply` after approval at the `prod` environment gate.
 - Run `python3 scripts/terraform_validate_strict.py` from the repo root for the local Terraform validation path used by CI.
@@ -31,11 +31,11 @@ Current production stack:
   - Cognito User Pool, App Client, hosted-login domain, `analytics-admin` group, and managed-login configuration for username-based admin login
 - Creates the Route 53 public hosted zone for `formoseaniap.com` as the future authoritative zone once the registrar and DNS move are possible.
 - Includes the full custom-domain infrastructure in the default stack:
-  - ACM certificates in `us-east-1` for the site and Cognito auth domain
+  - ACM certificates in `us-east-1` for the site and analytics auth subdomain
   - Route 53 validation records and alias records for the future transfer
   - CloudFront aliases for `formoseaniap.com` and `www.formoseaniap.com`
   - a CloudFront viewer-request function that redirects any non-canonical host to `https://www.formoseaniap.com`
-  - Cognito custom domain `https://auth.formoseaniap.com`
+  - a dedicated Cognito custom domain for analytics sign-in
   - Cognito managed-login branding JSON + SVG assets stored in this repo
 - Ignores CloudFront `web_acl_id` drift in Terraform because flat-rate plan subscriptions can auto-create and require a console-managed WAF web ACL.
 - Does not provision the old Lambda Function URL podcast proxy. The local Python proxy remains available for localhost preview only.
@@ -76,7 +76,7 @@ Remote backend:
 ```hcl
 terraform {
   backend "s3" {
-    bucket       = "formoseaniap-platform-tfstate-760259504838-ap-northeast-1-an"
+    bucket       = ""
     encrypt      = true
     key          = "infra/prod/terraform.tfstate"
     region       = "ap-northeast-1"
@@ -85,17 +85,18 @@ terraform {
 }
 ```
 
+Before running `terraform init`, copy `infra/backend.hcl.example` to `infra/backend.hcl`, replace the placeholder bucket name, and then run `terraform init -backend-config=backend.hcl`.
+
 Live rollout sequence for `formoseaniap.com` while Cloudflare remains authoritative:
 
 1. Run a plain `terraform apply` so Terraform creates the hosted zone, requests the ACM certificates, and starts the full custom-domain rollout.
 2. If the apply stops at ACM validation, read `manual_dns_validation_records` and `manual_dns_prerequisites` from Terraform output or state.
 3. Create the validation CNAME records at the live DNS provider from `manual_dns_validation_records`.
-4. Before rerunning apply, make sure `formoseaniap.com` resolves publicly through a real `A` record. Amazon Cognito checks the parent of `auth.formoseaniap.com` this way and can still reject a Cloudflare-proxied or apex-flattened setup even if external `dig` output already shows an address.
-5. If the live DNS provider is Cloudflare, keep the validation records `DNS only`. If needed, temporarily replace the apex cutover record with a `DNS only` placeholder `A` record until the Cognito custom domain is created, then switch the apex back to the final site cutover record.
-6. Rerun the same plain `terraform apply` after ACM validation has propagated.
-7. Create the final live DNS records from `manual_dns_site_cutover_records` and `manual_dns_auth_cutover_record`. If the live DNS provider is Cloudflare, use `DNS only` and rely on Cloudflare CNAME flattening for the apex record.
-8. Verify the site, apex redirect, legacy CloudFront redirect, analytics admin login/logout, `/podcasts/*`, and `/analytics-api/*`.
-9. When the registrar lock expires and Route 53 can become authoritative, switch over to the Route 53 nameservers from Terraform output.
+4. If the live DNS provider is Cloudflare, keep the validation records `DNS only` while certificate validation propagates.
+5. Rerun the same plain `terraform apply` after validation has propagated.
+6. Create the final live DNS records from `manual_dns_site_cutover_records` and `manual_dns_auth_cutover_record`. If the live DNS provider is Cloudflare, use `DNS only` and rely on Cloudflare CNAME flattening for the apex record.
+7. Verify the site, apex redirect, legacy CloudFront redirect, analytics admin login/logout, `/podcasts/*`, and `/analytics-api/*`.
+8. When the registrar lock expires and Route 53 can become authoritative, switch over to the Route 53 nameservers from Terraform output.
 
 Analytics auth notes:
 

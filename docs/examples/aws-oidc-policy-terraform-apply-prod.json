@@ -8,7 +8,7 @@
         "s3:GetBucketLocation",
         "s3:ListBucket"
       ],
-      "Resource": "arn:aws:s3:::formoseaniap-platform-tfstate-760259504838-ap-northeast-1-an",
+      "Resource": "arn:aws:s3:::<terraform-state-bucket-name>",
       "Condition": {
         "StringLike": {
           "s3:prefix": [
@@ -26,8 +26,8 @@
         "s3:PutObject"
       ],
       "Resource": [
-        "arn:aws:s3:::formoseaniap-platform-tfstate-760259504838-ap-northeast-1-an/infra/prod/terraform.tfstate",
-        "arn:aws:s3:::formoseaniap-platform-tfstate-760259504838-ap-northeast-1-an/infra/prod/terraform.tfstate.tflock"
+        "arn:aws:s3:::<terraform-state-bucket-name>/infra/prod/terraform.tfstate",
+        "arn:aws:s3:::<terraform-state-bucket-name>/infra/prod/terraform.tfstate.tflock"
       ]
     },
     {
@@ -46,8 +46,8 @@
       "Effect": "Allow",
       "Action": "s3:*",
       "Resource": [
-        "arn:aws:s3:::formoseaniap-platform-prod-site-760259504838-ap-northeast-1",
-        "arn:aws:s3:::formoseaniap-platform-prod-site-760259504838-ap-northeast-1/*"
+        "arn:aws:s3:::<site-bucket-name>",
+        "arn:aws:s3:::<site-bucket-name>/*"
       ]
     },
     {
