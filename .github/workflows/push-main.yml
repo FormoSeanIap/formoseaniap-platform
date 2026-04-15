@@ -158,4 +158,27 @@ jobs:
         run: aws s3 sync prod-site/ "s3://${{ steps.tf_outputs.outputs.site_bucket_name }}/" --delete
 
       - name: Invalidate production CloudFront cache
-        run: aws cloudfront create-invalidation --distribution-id "${{ steps.tf_outputs.outputs.cloudfront_distribution_id }}" --paths "/*"
+        id: cloudfront_invalidation
+        run: |
+          set -euo pipefail
+
+          invalidation_id="$(
+            aws cloudfront create-invalidation \
+              --distribution-id "${{ steps.tf_outputs.outputs.cloudfront_distribution_id }}" \
+              --paths "/*" \
+              --query 'Invalidation.Id' \
+              --output text
+          )"
+
+          echo "invalidation_id=${invalidation_id}" >> "$GITHUB_OUTPUT"
+          echo "- CloudFront invalidation requested: \`${invalidation_id}\`" >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Wait for production CloudFront invalidation
+        run: |
+          set -euo pipefail
+
+          aws cloudfront wait invalidation-completed \
+            --distribution-id "${{ steps.tf_outputs.outputs.cloudfront_distribution_id }}" \
+            --id "${{ steps.cloudfront_invalidation.outputs.invalidation_id }}"
+
+          echo "- CloudFront invalidation completed: \`${{ steps.cloudfront_invalidation.outputs.invalidation_id }}\`" >> "$GITHUB_STEP_SUMMARY"
