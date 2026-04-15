@@ -8,16 +8,6 @@ Curated follow-up work for the portfolio platform.
 
 ## Next
 
-- [ ] Fix the backend analytics collector Lambda
-  - Why: the backend Lambda that sends platform analytics is currently failing or unreliable, which means analytics data cannot be trusted until the collector path is repaired.
-  - Scope: inspect the current Lambda handler, identify the failure mode, fix the analytics submission flow, and verify that expected analytics events are emitted successfully without breaking the rest of the backend path.
-  - Done when: the analytics collector Lambda runs without the known error and platform analytics are recorded successfully in the intended destination.
-
-- [ ] Add backend Lambda monitoring with email alarms
-  - Why: backend failures should be detected automatically instead of waiting for manual checks, especially for the analytics collector and other Lambda-backed functionality.
-  - Scope: define the key Lambda CloudWatch metrics to monitor, create alarms for error conditions, wire the alarms to an email notification path such as SNS, and verify that alarm delivery works end to end.
-  - Done when: Lambda error metrics trigger CloudWatch alarms and an email notification is delivered to the configured recipient when a backend issue is detected.
-
 ## Later
 
 - [ ] Complete the `formoseaniap.com` cutover while Cloudflare remains authoritative
