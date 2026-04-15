@@ -1,0 +1,12 @@
+flowchart LR
+  GHA[GitHub Actions job] --> Token[GitHub OIDC token]
+  Token --> STS[AWS STS AssumeRoleWithWebIdentity]
+  STS --> PlanRole[Terraform plan role]
+  STS --> ApplyRole[Terraform apply role]
+  STS --> DeployRole[Production deploy role]
+  STS --> PreviewRole[Preview role]
+
+  PlanRole --> ReadOnly[Read-only Terraform plan access]
+  ApplyRole --> TFWrite[Production Terraform changes]
+  DeployRole --> Ship[Site sync + CloudFront invalidation]
+  PreviewRole --> Preview[Preview S3 and optional preview CDN]
