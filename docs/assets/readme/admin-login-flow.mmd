@@ -1,0 +1,38 @@
+sequenceDiagram
+  autonumber
+  actor User as Visitor browser
+  participant AdminPage as Static admin page<br/>www.formoseaniap.com/admin/analytics.html
+  participant CF as CloudFront
+  participant Cognito as Cognito managed login<br/>auth.formoseaniap.com
+  participant API as API Gateway<br/>/analytics-api/admin/*
+  participant Lambda as Admin Lambda
+  participant DDB as DynamoDB
+
+  User->>CF: GET /admin/analytics.html
+  CF-->>User: Static HTML, JS, and analytics config
+  User->>AdminPage: Load admin-analytics.js
+  AdminPage->>AdminPage: Check stored tokens and config
+
+  alt No valid token in browser
+    AdminPage->>AdminPage: Generate PKCE verifier and state
+    AdminPage->>Cognito: Redirect to /oauth2/authorize
+    Cognito-->>User: Hosted sign-in page
+    User->>Cognito: Submit credentials
+    Cognito-->>AdminPage: Redirect back with code and state
+    AdminPage->>AdminPage: Verify returned state
+    AdminPage->>Cognito: POST /oauth2/token with code_verifier
+    Cognito-->>AdminPage: Access token and ID token
+    AdminPage->>AdminPage: Store tokens and clean URL
+  end
+
+  AdminPage->>CF: Call /analytics-api/admin/session with Bearer token
+  CF->>API: Forward same-origin admin API request
+  API->>API: Validate JWT issuer and audience
+  API->>Lambda: Invoke protected admin route
+  Lambda->>Lambda: Check analytics-admin Cognito group
+  Lambda->>DDB: Read analytics data
+  DDB-->>Lambda: Return overview and article metrics
+  Lambda-->>API: JSON response
+  API-->>CF: Authorized response
+  CF-->>AdminPage: Admin analytics payload
+  AdminPage-->>User: Render private dashboard

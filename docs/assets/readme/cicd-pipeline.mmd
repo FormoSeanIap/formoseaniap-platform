@@ -1,0 +1,11 @@
+flowchart LR
+  Dev[Work branch or develop] --> PushOthers[push-others.yml]
+  PR[Pull request] --> PRValidate[pr-validate.yml]
+  Main[main] --> PushMain[push-main.yml]
+
+  PushOthers --> Validate1[Validate + optional Terraform plan]
+  PRValidate --> Validate2[Validate + preview artifact or preview deploy]
+  PushMain --> Gate[Protected prod environment]
+  Gate --> TFApply[Terraform plan and apply]
+  TFApply --> Deploy[Sync site to S3]
+  Deploy --> Invalidate[CloudFront invalidation]

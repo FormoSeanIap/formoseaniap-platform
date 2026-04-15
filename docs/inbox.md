@@ -55,6 +55,3 @@ Use this file for fast, low-friction capture when an idea appears before it is r
     - [ ] Add the minimal moving parts checklist (workflow permissions, AWS OIDC provider, role trust policy, permission policy)
     - [ ] Include at least one real debugging story (common `AccessDenied` / mis-scoped `sub` / wrong audience)
     - [ ] Summarize the security lesson: least privilege + environment/branch scoping
-
-- Expand the `README.md` so readers can quickly see what the website looks like and understand the infrastructure through an illustration.
-- Audit the repo for personal or sensitive information before making the GitHub project public; identify any resulting security or privacy risk.
