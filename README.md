@@ -158,6 +158,15 @@ Source: [`docs/assets/readme/oidc-roles.mmd`](docs/assets/readme/oidc-roles.mmd)
 | Production deploy role | Protected production stage in `push-main.yml` | Syncs the built site to S3 and invalidates CloudFront. |
 | Preview role | Optional preview stage in `pr-validate.yml` | Deploys PR previews when preview infrastructure is configured. |
 
+## Local Development
+
+Run the site preview and the podcast proxy in separate terminals when working locally. The site preview serves `site/` as the web root, and the podcast proxy keeps the podcast page working locally without depending on production routing.
+
+```bash
+python3 scripts/site_preview.py
+python3 scripts/podcast_proxy.py
+```
+
 ## Repository Map
 
 | Path | Purpose |
