@@ -571,8 +571,19 @@
     `;
   };
 
-  const renderCollectionCover = (collection, lang, extraClass = "") =>
-    `<div class="collection-cover${extraClass ? ` ${extraClass}` : ""}">${buildCollectionCoverBody(collection, lang)}</div>`;
+  const buildLinkAttrs = (href, { external = false } = {}) =>
+    external
+      ? `href="${escapeHtml(href)}" target="_blank" rel="noopener noreferrer"`
+      : `href="${escapeHtml(href)}"`;
+
+  const renderCollectionCover = (collection, lang, href, extraClass = "") =>
+    `
+      <a class="card-media-link" ${buildLinkAttrs(href)} aria-label="${escapeHtml(
+        lang === "zh" ? `開啟 ${collection.title}` : `Open ${collection.title}`
+      )}">
+        <div class="collection-cover${extraClass ? ` ${extraClass}` : ""}">${buildCollectionCoverBody(collection, lang)}</div>
+      </a>
+    `;
 
   const renderSeriesContextCover = (container, collection, lang) => {
     if (!container || !collection) {
@@ -609,7 +620,7 @@
 
         return `
           <article class="card collection-card">
-            ${renderCollectionCover(collection, uiLang)}
+            ${renderCollectionCover(collection, uiLang, href)}
             <div class="collection-card-content">
               <p class="meta">${escapeHtml(meta)}</p>
               ${languageBadges}
@@ -627,15 +638,20 @@
       return "";
     }
     const alt = uiLang === "zh" ? `${article.title} 預覽圖` : `Preview image for ${article.title}`;
+    const href = article.external_url || article.page_url;
     return `
-      <div class="article-card-media">
-        <img
-          class="article-card-image"
-          src="${escapeHtml(article.preview_image)}"
-          alt="${escapeHtml(alt)}"
-          loading="lazy"
-        />
-      </div>
+      <a class="card-media-link" ${buildLinkAttrs(href, { external: Boolean(article.external_url) })} aria-label="${escapeHtml(
+        uiLang === "zh" ? `閱讀 ${article.title}` : `Read ${article.title}`
+      )}">
+        <div class="article-card-media">
+          <img
+            class="article-card-image"
+            src="${escapeHtml(article.preview_image)}"
+            alt="${escapeHtml(alt)}"
+            loading="lazy"
+          />
+        </div>
+      </a>
     `;
   };
 
@@ -678,9 +694,9 @@
             ? `<p class="meta">${escapeHtml(part)}</p>`
             : "";
         const linkLabel = article.external_url ? copy.readMedium : copy.readArticle;
-        const linkAttrs = article.external_url
-          ? `href="${escapeHtml(article.external_url)}" target="_blank" rel="noopener noreferrer"`
-          : `href="${escapeHtml(article.page_url)}"`;
+        const linkAttrs = buildLinkAttrs(article.external_url || article.page_url, {
+          external: Boolean(article.external_url)
+        });
         const languageBadges =
           state.langs.length > 1
             ? `
