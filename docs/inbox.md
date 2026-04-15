@@ -20,6 +20,11 @@ Use this file for fast, low-friction capture when an idea appears before it is r
     - [ ] Note the key records and reasoning (A/AAAA vs CNAME, apex handling/flattening, www redirect, TTL choices)
     - [ ] Write the debugging checklist you used (`dig`, Cloudflare dashboard checks, origin health checks)
     - [ ] End with “rules of thumb” you learned for Cloudflare + CDN/static hosting
+  - Cloudflare Cache
+    - [ ] Add the deploy/cache mismatch story: new CSS was live, but `about.html` still looked old because Cloudflare was serving stale HTML even after the GitHub Actions deploy succeeded
+    - [ ] Record the evidence chain you used to confirm it: merged PR contents, successful `push-main` run, `about.html` uploaded to S3, CloudFront invalidation completed, live CSS updated first
+    - [ ] Write the troubleshooting sequence: compare live HTML vs CSS, inspect response headers, separate CloudFront from Cloudflare behavior, then purge the exact URL in Cloudflare
+    - [ ] Note the practical fix and prevention rule: purge Cloudflare for changed HTML pages or avoid caching HTML there if CloudFront is already the main CDN cache layer
   - Token limits / context limits while pairing with Copilot
     - [ ] Describe the failure mode: hitting token/context limits and losing important repo context
     - [ ] Write the tactics that worked: smaller prompts, one-file-at-a-time, ask for diffs, paste exact error output, pin requirements
