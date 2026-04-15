@@ -213,7 +213,7 @@ Build-time flow:
 - `./.github/workflows/push-others.yml` runs unit tests, rebuilds generated site artifacts, fails on generated-artifact drift, and adds shared Terraform validation plus live-state Terraform plan when Terraform-related files changed on `feature/*`, `fix/*`, `chore/*`, `docs/*`, `hotfix/*`, and `develop`.
 - `./.github/workflows/pr-validate.yml` runs unit tests, rebuilds generated site artifacts, fails if generated outputs are out of date, uploads a preview artifact, performs shared Terraform validation plus an optional OIDC-backed Terraform plan when infra files changed, and only proceeds to preview status/deploy after the Terraform PR checks are complete.
 - `./.github/workflows/push-main.yml` re-runs the same validation path on `main`, can publish a pre-promotion Terraform plan artifact when the read-only plan role is configured, and waits at the protected `prod` environment before always running Terraform plan/apply against the production state, reading production outputs from remote state, and deploying the generated `site/` output.
-- On successful production promotion, `Push Main` also writes the live analytics runtime config JSON into the built site artifact before syncing to S3 so the admin page gets the current Cognito/client settings without hard-coding them in the repo.
+- On successful production promotion, `Push Main` also writes the live analytics runtime config JSON into the built site artifact before syncing to S3 so the admin page gets the current Cognito/client settings without hard-coding them in the repo, then creates a CloudFront invalidation and waits for it to complete before the workflow finishes.
 - `./.github/workflows/version-audit.yml` runs a weekly and manually triggered version audit for Python, Terraform, and tracked GitHub Actions, writing a summary plus a JSON artifact.
 - `./.github/dependabot.yml` opens weekly update PRs for Terraform and GitHub Actions dependency drift.
 - Shared Terraform CI runs `python3 scripts/terraform_validate_strict.py`, which fails on Terraform errors and deprecation diagnostics. Terraform MCP is used for current-doc lookup, but the CI gate is the actual enforcement layer.
@@ -560,7 +560,7 @@ Resume AWS rollout from these steps:
 10. Verify `https://www.formoseaniap.com`, the apex redirect, the legacy CloudFront redirect, `/podcasts/*`, `/analytics-api/*`, and `/admin/analytics.html` on the custom domains.
 11. Run `AWS OIDC Smoke` against a `prod` environment-scoped role.
 12. Review the optional Terraform plan artifact from `Push Main` when it is available, then approve the protected `prod` environment.
-13. Let the gated `Push Main` workflow always run Terraform plan/apply against the production stack and deploy the generated site; it reads `site_bucket_name`, `cloudfront_distribution_id`, and analytics runtime config outputs from Terraform remote state, so separate production bucket/distribution variables are not required.
+13. Let the gated `Push Main` workflow always run Terraform plan/apply against the production stack and deploy the generated site; it reads `site_bucket_name`, `cloudfront_distribution_id`, and analytics runtime config outputs from Terraform remote state, so separate production bucket/distribution variables are not required, and it waits for the post-deploy CloudFront invalidation to complete before succeeding.
 14. After the monitoring resources are first applied, confirm the SNS email subscription sent to `TF_VAR_ANALYTICS_ALARM_EMAIL`, then verify the CloudWatch alarms and dashboard.
 
 ## Style Direction
