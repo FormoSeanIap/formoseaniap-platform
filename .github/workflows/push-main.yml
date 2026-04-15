@@ -48,10 +48,11 @@ jobs:
         uses: ./.github/actions/terraform-plan
         with:
           aws_region: ${{ vars.AWS_REGION }}
+          backend_bucket: ${{ vars.TERRAFORM_BACKEND_BUCKET }}
           role_arn: ${{ vars.AWS_TERRAFORM_PLAN_ROLE_ARN }}
           role_session_name: gha-terraform-plan-main-${{ github.run_id }}
           emit_unconfigured_summary: "true"
-          summary_message: Set AWS_REGION and AWS_TERRAFORM_PLAN_ROLE_ARN repo variables to enable pre-promotion Terraform plan artifacts on main pushes.
+          summary_message: Set AWS_REGION, AWS_TERRAFORM_PLAN_ROLE_ARN, and TERRAFORM_BACKEND_BUCKET repo variables to enable pre-promotion Terraform plan artifacts on main pushes.
           upload_plan_artifact: "true"
           plan_artifact_name: terraform-plan-main-${{ github.run_id }}
         env:
@@ -66,15 +67,15 @@ jobs:
         run: echo "Set TF_VAR_ANALYTICS_ALARM_EMAIL repo variable to enable Terraform plan artifacts for analytics Lambda monitoring changes." >> "$GITHUB_STEP_SUMMARY"
 
       - name: Note production promotion status when deploy credentials are not configured
-        if: ${{ needs.terraform_validate.outputs.has_tf_root == 'true' && (vars.AWS_REGION == '' || vars.AWS_TERRAFORM_APPLY_ROLE_ARN == '' || vars.AWS_PROD_ROLE_ARN == '' || vars.TF_VAR_ANALYTICS_ALARM_EMAIL == '') }}
-        run: echo "Set AWS_REGION, AWS_TERRAFORM_APPLY_ROLE_ARN, AWS_PROD_ROLE_ARN, and TF_VAR_ANALYTICS_ALARM_EMAIL repo variables to enable production promotion from main." >> "$GITHUB_STEP_SUMMARY"
+        if: ${{ needs.terraform_validate.outputs.has_tf_root == 'true' && (vars.AWS_REGION == '' || vars.TERRAFORM_BACKEND_BUCKET == '' || vars.AWS_TERRAFORM_APPLY_ROLE_ARN == '' || vars.AWS_PROD_ROLE_ARN == '' || vars.TF_VAR_ANALYTICS_ALARM_EMAIL == '') }}
+        run: echo "Set AWS_REGION, TERRAFORM_BACKEND_BUCKET, AWS_TERRAFORM_APPLY_ROLE_ARN, AWS_PROD_ROLE_ARN, and TF_VAR_ANALYTICS_ALARM_EMAIL repo variables to enable production promotion from main." >> "$GITHUB_STEP_SUMMARY"
 
   promote_prod:
     needs:
       - validate
       - terraform_validate
       - terraform_plan
-    if: ${{ needs.terraform_validate.outputs.has_tf_root == 'true' && vars.AWS_REGION != '' && vars.AWS_TERRAFORM_APPLY_ROLE_ARN != '' && vars.AWS_PROD_ROLE_ARN != '' && vars.TF_VAR_ANALYTICS_ALARM_EMAIL != '' }}
+    if: ${{ needs.terraform_validate.outputs.has_tf_root == 'true' && vars.AWS_REGION != '' && vars.TERRAFORM_BACKEND_BUCKET != '' && vars.AWS_TERRAFORM_APPLY_ROLE_ARN != '' && vars.AWS_PROD_ROLE_ARN != '' && vars.TF_VAR_ANALYTICS_ALARM_EMAIL != '' }}
     runs-on: ubuntu-latest
     environment: prod
     defaults:
@@ -107,7 +108,7 @@ jobs:
 
       - name: Terraform init
         working-directory: infra
-        run: terraform init -input=false
+        run: terraform init -input=false -backend-config="bucket=${{ vars.TERRAFORM_BACKEND_BUCKET }}"
 
       - name: Terraform plan
         working-directory: infra

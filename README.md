@@ -552,7 +552,7 @@ Resume AWS rollout from these steps:
 1. Create the GitHub Actions OIDC identity provider in AWS if it does not already exist.
 2. Create the IAM roles and policies from `docs/aws-oidc-github-actions.md`.
 3. Use `docs/examples/aws-oidc-trust-policy-plan-and-output.json` for the Terraform plan role, because PRs and main-branch pre-promotion plans still use a read-only role.
-4. Set GitHub repository variables: `AWS_REGION`, `AWS_TERRAFORM_PLAN_ROLE_ARN`, `AWS_TERRAFORM_APPLY_ROLE_ARN`, `AWS_PROD_ROLE_ARN`, and `TF_VAR_ANALYTICS_ALARM_EMAIL`.
+4. Set GitHub repository variables: `AWS_REGION`, `TERRAFORM_BACKEND_BUCKET`, `AWS_TERRAFORM_PLAN_ROLE_ARN`, `AWS_TERRAFORM_APPLY_ROLE_ARN`, `AWS_PROD_ROLE_ARN`, and `TF_VAR_ANALYTICS_ALARM_EMAIL`.
 5. Copy `infra/backend.hcl.example` to `infra/backend.hcl`, set the bucket name, then run `terraform init -backend-config=backend.hcl`.
 6. Run a plain `terraform apply` so Terraform creates the hosted zone, requests the ACM certificates, and starts the full custom-domain infrastructure rollout.
 7. If that first apply stops at ACM validation, read `manual_dns_validation_records` and `manual_dns_prerequisites` from Terraform output or state, then create those validation `CNAME`s at the live DNS provider.

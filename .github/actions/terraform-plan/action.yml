@@ -6,6 +6,10 @@ inputs:
     description: AWS region used for OIDC-backed Terraform plan runs.
     required: false
     default: ""
+  backend_bucket:
+    description: S3 bucket name for the Terraform backend state.
+    required: false
+    default: ""
   role_arn:
     description: IAM role ARN to assume for the Terraform plan.
     required: false
@@ -20,7 +24,7 @@ inputs:
   summary_message:
     description: Summary text written when AWS settings are missing.
     required: false
-    default: "Set AWS_REGION and AWS_TERRAFORM_PLAN_ROLE_ARN repo variables to enable terraform plan runs."
+    default: "Set AWS_REGION, AWS_TERRAFORM_PLAN_ROLE_ARN, and TERRAFORM_BACKEND_BUCKET repo variables to enable terraform plan runs."
   upload_plan_artifact:
     description: Upload tfplan and tfplan.txt as a workflow artifact.
     required: false
@@ -39,12 +43,12 @@ runs:
         terraform_wrapper: false
 
     - name: Note plan status when AWS is not configured
-      if: ${{ inputs.emit_unconfigured_summary == 'true' && (inputs.aws_region == '' || inputs.role_arn == '') }}
+      if: ${{ inputs.emit_unconfigured_summary == 'true' && (inputs.aws_region == '' || inputs.role_arn == '' || inputs.backend_bucket == '') }}
       shell: bash
       run: echo "${{ inputs.summary_message }}" >> "$GITHUB_STEP_SUMMARY"
 
     - name: Configure AWS credentials from GitHub OIDC
-      if: ${{ inputs.aws_region != '' && inputs.role_arn != '' }}
+      if: ${{ inputs.aws_region != '' && inputs.role_arn != '' && inputs.backend_bucket != '' }}
       uses: aws-actions/configure-aws-credentials@v6
       with:
         aws-region: ${{ inputs.aws_region }}
@@ -52,22 +56,22 @@ runs:
         role-session-name: ${{ inputs.role_session_name }}
 
     - name: Terraform init
-      if: ${{ inputs.aws_region != '' && inputs.role_arn != '' }}
+      if: ${{ inputs.aws_region != '' && inputs.role_arn != '' && inputs.backend_bucket != '' }}
       shell: bash
-      run: terraform -chdir=infra init -input=false
+      run: terraform -chdir=infra init -input=false -backend-config="bucket=${{ inputs.backend_bucket }}"
 
     - name: Terraform plan
-      if: ${{ inputs.aws_region != '' && inputs.role_arn != '' }}
+      if: ${{ inputs.aws_region != '' && inputs.role_arn != '' && inputs.backend_bucket != '' }}
       shell: bash
       run: terraform -chdir=infra plan -input=false -no-color -out=tfplan
 
     - name: Render textual plan
-      if: ${{ inputs.aws_region != '' && inputs.role_arn != '' && inputs.upload_plan_artifact == 'true' }}
+      if: ${{ inputs.aws_region != '' && inputs.role_arn != '' && inputs.backend_bucket != '' && inputs.upload_plan_artifact == 'true' }}
       shell: bash
       run: terraform -chdir=infra show -no-color tfplan > infra/tfplan.txt
 
     - name: Upload plan artifacts
-      if: ${{ inputs.aws_region != '' && inputs.role_arn != '' && inputs.upload_plan_artifact == 'true' }}
+      if: ${{ inputs.aws_region != '' && inputs.role_arn != '' && inputs.backend_bucket != '' && inputs.upload_plan_artifact == 'true' }}
       uses: actions/upload-artifact@v6
       with:
         name: ${{ inputs.plan_artifact_name }}

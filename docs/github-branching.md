@@ -55,6 +55,7 @@ When a local merge is pushed directly to a work branch or `develop`, `Push Other
 Set these as GitHub repository variables when the AWS side is ready:
 
 - `AWS_REGION`: `ap-northeast-1`
+- `TERRAFORM_BACKEND_BUCKET`: S3 bucket name used for Terraform remote state
 - `AWS_PROD_ROLE_ARN`: ARN for the production deploy role
 - `AWS_TERRAFORM_PLAN_ROLE_ARN`: ARN for the read-only Terraform plan role
 - `AWS_TERRAFORM_APPLY_ROLE_ARN`: ARN for the production Terraform apply role

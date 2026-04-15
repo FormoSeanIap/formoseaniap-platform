@@ -80,6 +80,7 @@ That is enough to verify the trust policy and the GitHub-side `id-token: write` 
 ## GitHub Variables Expected By The Workflows
 
 - `AWS_REGION`: `ap-northeast-1`
+- `TERRAFORM_BACKEND_BUCKET`: S3 bucket name used for Terraform remote state
 - `AWS_PROD_ROLE_ARN`: ARN for the production deploy role
 - `AWS_TERRAFORM_PLAN_ROLE_ARN`: ARN for the read-only Terraform plan role
 - `AWS_TERRAFORM_APPLY_ROLE_ARN`: ARN for the production Terraform apply role
@@ -98,7 +99,7 @@ When the new AWS account is ready:
 2. Create the GitHub Actions roles using the trust policy and permissions policy templates above.
 3. Protect the `prod` GitHub environment before AWS credentials are issued.
 4. Run the smoke-test workflow with `github_environment=prod`, `aws_region=ap-northeast-1`, and one environment-scoped role ARN.
-5. Set `AWS_REGION`, `AWS_TERRAFORM_PLAN_ROLE_ARN`, `AWS_TERRAFORM_APPLY_ROLE_ARN`, and `AWS_PROD_ROLE_ARN`.
+5. Set `AWS_REGION`, `TERRAFORM_BACKEND_BUCKET`, `AWS_TERRAFORM_PLAN_ROLE_ARN`, `AWS_TERRAFORM_APPLY_ROLE_ARN`, and `AWS_PROD_ROLE_ARN`.
 6. Merge or push the release to `main`.
 7. Review the optional Terraform plan artifact from `Push Main` when it is available.
 8. Approve the `prod` environment in the `Push Main` workflow from `push-main.yml` so it can always run Terraform plan/apply against production and deploy the site.

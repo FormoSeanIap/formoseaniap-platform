@@ -53,10 +53,11 @@ jobs:
         uses: ./.github/actions/terraform-plan
         with:
           aws_region: ${{ vars.AWS_REGION }}
+          backend_bucket: ${{ vars.TERRAFORM_BACKEND_BUCKET }}
           role_arn: ${{ vars.AWS_TERRAFORM_PLAN_ROLE_ARN }}
           role_session_name: gha-terraform-plan-push-${{ github.run_number }}
           emit_unconfigured_summary: "true"
-          summary_message: Set AWS_REGION and AWS_TERRAFORM_PLAN_ROLE_ARN repo variables to enable terraform plan runs on push validation.
+          summary_message: Set AWS_REGION, AWS_TERRAFORM_PLAN_ROLE_ARN, and TERRAFORM_BACKEND_BUCKET repo variables to enable terraform plan runs on push validation.
           upload_plan_artifact: "false"
         env:
           TF_VAR_analytics_alarm_email: ${{ vars.TF_VAR_ANALYTICS_ALARM_EMAIL }}
