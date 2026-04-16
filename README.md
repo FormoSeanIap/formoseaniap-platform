@@ -106,6 +106,62 @@ The podcast feeds are owned by a third party, so the browser cannot rely on upst
 | Custom domains | `www.formoseaniap.com` is the canonical host, with apex redirect support. |
 | Cost control | The stack uses AWS-managed CloudFront cache policies and keeps flat-rate CloudFront plan handling as a deliberate console-managed step. |
 
+## Cost Estimate
+
+This estimate is a rough order-of-magnitude view of the production stack cost as of April 16, 2026. It is meant for planning and discussion, not as a billing guarantee. Exact AWS charges still depend on region, monthly traffic shape, account-level free-tier eligibility, and whether the Route 53 hosted zone is attached to the CloudFront flat-rate plan.
+
+### Fixed baseline
+
+| Item | Assumption | Estimated cost |
+| --- | --- | --- |
+| Domain registration | Third-party registrar cost for `formoseaniap.com` | about `$15/year` or `$1.25/month` |
+| CloudFront flat-rate plan | Free tier with one distribution | `$0/month` |
+| Route 53 hosted zone | `$0` when attached to the CloudFront plan, otherwise standard Route 53 pricing applies | `$0` or about `$0.50/month` plus DNS queries |
+| S3 site storage | Local site output is well below the Free plan's included `5 GB` of S3 Standard credits | effectively `$0/month` at current size |
+| Cognito admin login | Admin-only access pattern, expected to stay far below the standard MAU threshold for meaningful cost | effectively `$0/month` at current scale |
+| CloudWatch dashboard and alarms | One dashboard and two alarms, which fit comfortably inside small-scale usage | effectively `$0/month` at current scale |
+| SNS alarm email delivery | Only sends when alarms trigger | near `$0/month` unless alarms become noisy |
+
+### Variable backend cost
+
+The traffic-sensitive part of the stack is the backend behind CloudFront:
+
+- `API Gateway HTTP API` handles analytics and admin requests.
+- `Lambda` runs the collector and admin handlers.
+- `DynamoDB` stores counters and uniqueness state.
+
+The current analytics collector writes more than one record per tracked view. Each collect request attempts two uniqueness writes and performs two counter updates, so DynamoDB contributes more to variable cost than it would in a simpler single-write design.
+
+Using AWS reference pricing as a working estimate:
+
+- `API Gateway HTTP API`: about `$1.00 / 1M requests`
+- `Lambda`: about `$0.30-$0.41 / 1M requests` assuming `128 MB` memory and `50-100 ms` average duration
+- `DynamoDB on-demand`: about `$2.50 / 1M analytics collect requests`
+
+That gives a rough backend variable cost of about `~$3.8-$3.9 per 1M analytics collect requests`.
+
+### Traffic scenarios
+
+These scenarios assume the Route 53 zone is attached to the CloudFront plan, the CloudFront plan stays on the Free tier, and each analytics page view results in one collect request.
+
+| Scenario | Analytics collect requests / month | Estimated backend usage | Estimated monthly total |
+| --- | ---: | ---: | ---: |
+| Small | `10,000` | about `$0.04` | about `$1.29/month` |
+| Medium | `100,000` | about `$0.38-$0.39` | about `$1.63-$1.64/month` |
+| Large | `1,000,000` | about `$3.80-$3.91` | about `$5.05-$5.16/month` |
+
+If the Route 53 hosted zone is not attached to the CloudFront plan, add about `+$0.50/month` plus Route 53 DNS query charges.
+
+### CloudFront plan note
+
+CloudFront flat-rate plans no longer behave like the older pay-as-you-go CDN model:
+
+- The Free plan includes `1M requests/month` and `100 GB/month` data transfer as its published allowance.
+- AWS states there are no overage charges when you exceed the allowance.
+- If usage stays materially above the allowance for multiple months, AWS may recommend upgrading the plan or may adjust delivery performance instead of billing request overages.
+
+In practice, that means the predictable cost risk at this scale is mostly the regional backend usage, not CloudFront edge overages. If sustained traffic growth pushes the site past the Free plan's intended baseline, the next obvious planning step is to compare whether the `Pro` CloudFront plan at about `$15/month` is justified for performance headroom.
+
 ## CI/CD Design
 
 | Workflow | Trigger | Purpose |
@@ -158,15 +214,6 @@ Source: [`docs/assets/readme/oidc-roles.mmd`](docs/assets/readme/oidc-roles.mmd)
 | Production deploy role | Protected production stage in `push-main.yml` | Syncs the built site to S3 and invalidates CloudFront. |
 | Preview role | Optional preview stage in `pr-validate.yml` | Deploys PR previews when preview infrastructure is configured. |
 
-## Local Development
-
-Run the site preview and the podcast proxy in separate terminals when working locally. The site preview serves `site/` as the web root, and the podcast proxy keeps the podcast page working locally without depending on production routing.
-
-```bash
-python3 scripts/site_preview.py
-python3 scripts/podcast_proxy.py
-```
-
 ## Repository Map
 
 | Path | Purpose |
@@ -178,6 +225,41 @@ python3 scripts/podcast_proxy.py
 | `infra/` | Terraform for AWS hosting, analytics backend, auth, and domain resources. |
 | `.github/` | Shared GitHub Actions and workflow definitions. |
 | `docs/` | Operational notes, examples, and backlog/inbox planning files. |
+
+## Local Development
+
+Run the site preview and the podcast proxy in separate terminals when working locally. The site preview serves `site/` as the web root, and the podcast proxy keeps the podcast page working locally without depending on production routing.
+
+```bash
+python3 scripts/site_preview.py
+python3 scripts/podcast_proxy.py
+```
+
+## Design Direction
+
+This platform is intended to evolve toward a calmer and more opinionated visual identity, with design choices that reflect both engineering rigor and personal taste rather than a generic portfolio template.
+
+### Style direction
+
+Reference inspiration:
+
+- [p5aholic.me](https://p5aholic.me/)
+- [shoya-kajita.com](https://shoya-kajita.com/)
+- [edwinle.com](https://edwinle.com/)
+
+Design goals:
+
+- Japanese-style minimalism
+- Strong typography and whitespace
+- Subtle animation and a calm visual tone
+- Clear content hierarchy
+
+### Development principles
+
+- Keep it simple first, then iterate.
+- Prefer maintainability over premature complexity.
+- Build for long-term clarity and extensibility.
+- Let the platform reflect both engineering rigor and personal style.
 
 ## Further Reading
 
