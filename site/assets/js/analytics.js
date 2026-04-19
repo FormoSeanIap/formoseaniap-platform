@@ -61,7 +61,8 @@
     sentKeys.add(trackingKey);
     sendPayload({
       ...payload,
-      visitor_id: getVisitorId()
+      visitor_id: getVisitorId(),
+      domain: "main"
     });
   };
 

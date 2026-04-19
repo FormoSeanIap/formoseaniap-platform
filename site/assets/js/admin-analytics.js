@@ -26,6 +26,7 @@
     summaryCards: document.querySelector("#analytics-summary-cards"),
     rangeForm: document.querySelector("#analytics-range-form"),
     presetButtons: [...document.querySelectorAll("[data-range-preset]")],
+    domainFilterButtons: [...document.querySelectorAll("[data-domain-filter]")],
     startInput: document.querySelector("#analytics-range-start"),
     endInput: document.querySelector("#analytics-range-end"),
     trendChart: document.querySelector("#analytics-trend-chart"),
@@ -44,6 +45,7 @@
     articleGroups: [],
     articleLookup: new Map(),
     config: null,
+    domainFilter: "all",
     mockCache: new Map(),
     rangePreset: "30d",
     signedIn: false,
@@ -684,6 +686,7 @@
     const pathname = url.pathname;
     const from = url.searchParams.get("from");
     const to = url.searchParams.get("to");
+    const domainParam = url.searchParams.get("domain") || null;
     const range = {
       start: from || buildRangePreset(30).start,
       end: to || utcToday()
@@ -697,7 +700,11 @@
 
     if (pathname === "/analytics-api/admin/overview") {
       buildMockSessionPayload();
-      return snapshot.overview;
+      const overview = { ...snapshot.overview };
+      if (domainParam) {
+        overview.domain = domainParam;
+      }
+      return overview;
     }
 
     if (pathname === "/analytics-api/admin/articles") {
@@ -1147,6 +1154,23 @@
     return `from=${encodeURIComponent(range.start)}&to=${encodeURIComponent(range.end)}`;
   };
 
+  const getDomainQuery = () => {
+    if (state.domainFilter === "all") {
+      return "";
+    }
+    return `&domain=${encodeURIComponent(state.domainFilter)}`;
+  };
+
+  const setDomainFilter = (filter) => {
+    state.domainFilter = filter;
+    state.mockCache.clear();
+    els.domainFilterButtons.forEach((button) => {
+      const active = button.dataset.domainFilter === filter;
+      button.classList.toggle("is-active", active);
+      button.setAttribute("aria-pressed", String(active));
+    });
+  };
+
   const refreshDashboard = async ({ showLoadingState = false } = {}) => {
     setSignedInShell();
     if (showLoadingState) {
@@ -1156,11 +1180,12 @@
     }
 
     const query = getRangeQuery();
+    const domainQuery = getDomainQuery();
     try {
       const [, overviewPayload, topArticlesPayload] = await Promise.all([
         apiFetch("/analytics-api/admin/session"),
-        apiFetch(`/analytics-api/admin/overview?${query}`),
-        apiFetch(`/analytics-api/admin/articles?${query}&group=${encodeURIComponent(state.topArticlesGroup)}&limit=20`)
+        apiFetch(`/analytics-api/admin/overview?${query}${domainQuery}`),
+        apiFetch(`/analytics-api/admin/articles?${query}${domainQuery}&group=${encodeURIComponent(state.topArticlesGroup)}&limit=20`)
       ]);
 
       renderSummaryCards(overviewPayload.summary || {});
@@ -1170,7 +1195,7 @@
 
       const articleId = state.activeArticleId || topArticlesPayload.items?.[0]?.article_id;
       if (articleId) {
-        const detailPayload = await apiFetch(`/analytics-api/admin/articles/${encodeURIComponent(articleId)}?${query}`);
+        const detailPayload = await apiFetch(`/analytics-api/admin/articles/${encodeURIComponent(articleId)}?${query}${domainQuery}`);
         renderArticleDetail(detailPayload);
       } else {
         els.articleDetailMeta.innerHTML = '<p class="meta">Select an article to inspect its trend.</p>';
@@ -1183,7 +1208,8 @@
 
   const handleArticleOpen = async (articleId) => {
     const query = getRangeQuery();
-    const detailPayload = await apiFetch(`/analytics-api/admin/articles/${encodeURIComponent(articleId)}?${query}`);
+    const domainQuery = getDomainQuery();
+    const detailPayload = await apiFetch(`/analytics-api/admin/articles/${encodeURIComponent(articleId)}?${query}${domainQuery}`);
     renderArticleDetail(detailPayload);
   };
 
@@ -1227,6 +1253,20 @@
         const preset = button.dataset.rangePreset || "30d";
         const days = Number(preset.replace("d", ""));
         setRange(buildRangePreset(days), preset);
+      });
+    });
+
+    els.domainFilterButtons.forEach((button) => {
+      button.addEventListener("click", async () => {
+        const filter = button.dataset.domainFilter || "all";
+        setDomainFilter(filter);
+        await refreshDashboard().catch((error) => {
+          presentDashboardError(error, {
+            fallbackMessage: "Failed to load analytics.",
+            fallbackTitle: "Unable to load analytics",
+            mockFallbackTitle: "Unable to load mock analytics"
+          });
+        });
       });
     });
 

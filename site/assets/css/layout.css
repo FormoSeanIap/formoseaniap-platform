@@ -83,11 +83,20 @@ body[data-page="about"] .hero {
   grid-template-columns: minmax(0, 1.45fr) minmax(0, 1.15fr);
 }
 
-body[data-page="about"] .hero > * {
+body[data-page="about"] .hero>* {
   min-width: 0;
 }
 
 body[data-page="projects"] .hero {
+  grid-template-columns: 1fr;
+}
+
+body[data-page="eng-home"] .hero {
+  grid-template-columns: 1fr;
+}
+
+body[data-page="eng-projects"] .hero,
+body[data-page="eng-articles"] .hero {
   grid-template-columns: 1fr;
 }
 
@@ -219,6 +228,7 @@ body[data-page="home"] .footer {
 }
 
 @media (max-width: 900px) {
+
   .hero,
   .grid-3 {
     grid-template-columns: 1fr;

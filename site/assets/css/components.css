@@ -79,7 +79,7 @@
 }
 
 .lead {
-  max-width: 56ch;
+  max-width: 85ch;
   font-size: var(--step-1);
 }
 
@@ -89,6 +89,7 @@
   border-radius: var(--radius);
   padding: var(--space-4);
   display: grid;
+  grid-template-columns: minmax(0, 1fr);
   gap: var(--space-3);
   transition: transform var(--motion-mid) var(--ease-standard),
     border-color var(--motion-mid) var(--ease-standard),
@@ -208,6 +209,26 @@
 .about-contact-value {
   color: var(--text-soft);
   overflow-wrap: anywhere;
+}
+
+.skill-category-list {
+  display: grid;
+  gap: 0.55rem;
+  line-height: 1.6;
+}
+
+.skill-category-list li {
+  color: var(--text-soft);
+  overflow-wrap: anywhere;
+}
+
+.skill-category-list li strong {
+  color: var(--text);
+  margin-right: 0.35rem;
+}
+
+.snapshot-grid {
+  margin-top: var(--space-4);
 }
 
 .project-card {
@@ -742,9 +763,11 @@
   0% {
     transform: translateY(0) translateX(0) scale(1);
   }
+
   50% {
     transform: translateY(-18px) translateX(10px) scale(1.08);
   }
+
   100% {
     transform: translateY(0) translateX(0) scale(1);
   }
@@ -814,33 +837,67 @@
   border-bottom: 1px dashed var(--line);
 }
 
+.timeline li.card ul {
+  list-style: disc;
+  padding-left: 1.25rem;
+  display: grid;
+  gap: 0.45rem;
+  margin: 0;
+}
+
+.timeline li.card ul li {
+  display: list-item;
+  padding: 0;
+  border: 0;
+  color: var(--text-soft);
+}
+
+.experience-subsection {
+  display: grid;
+  gap: 0.4rem;
+  margin-top: var(--space-2);
+}
+
+.experience-subsection h4 {
+  margin: 0;
+  font-family: var(--font-sans);
+  font-size: var(--step-0);
+  line-height: 1.3;
+  color: var(--text);
+  letter-spacing: 0.01em;
+}
+
+.experience-subsection ul {
+  margin: 0;
+}
+
 .article-content {
   display: block;
 }
 
-.article-content > * {
+.article-content>* {
   margin: 0;
 }
 
-.article-content > * + * {
+.article-content>*+* {
   margin-top: var(--space-3);
 }
 
-.article-content > .article-break {
+.article-content>.article-break {
   display: block;
   width: 100%;
   margin-top: 0;
 }
 
-.article-content > .article-break + * {
+.article-content>.article-break+* {
   margin-top: 0;
 }
 
-.article-content > .article-break--small {
+.article-content>.article-break--small {
   height: calc(var(--space-5) + var(--space-2));
 }
 
-.article-content > .article-break--large {
+.article-content>.article-break--large {
   height: calc(var(--space-6) + var(--space-4));
 }
 
