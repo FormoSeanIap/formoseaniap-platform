@@ -37,10 +37,18 @@ runs:
         git diff --stat -- site/data site/assets/articles site/rss.xml site/zh/rss.xml
         git diff --exit-code -- site/data site/assets/articles site/rss.xml site/zh/rss.xml
 
+    - name: Ensure engineering generated outputs are committed
+      shell: bash
+      run: |
+        git diff --stat -- site-eng/data site-eng/assets/articles site-eng/rss.xml
+        git diff --exit-code -- site-eng/data site-eng/assets/articles site-eng/rss.xml
+
     - name: Upload site artifact
       if: ${{ inputs.upload_site_artifact == 'true' }}
       uses: actions/upload-artifact@v6
       with:
         name: ${{ inputs.site_artifact_name }}
-        path: site/
+        path: |
+          site/
+          site-eng/
         if-no-files-found: error

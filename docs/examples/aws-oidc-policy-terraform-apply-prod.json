@@ -47,7 +47,9 @@
       "Action": "s3:*",
       "Resource": [
         "arn:aws:s3:::<site-bucket-name>",
-        "arn:aws:s3:::<site-bucket-name>/*"
+        "arn:aws:s3:::<site-bucket-name>/*",
+        "arn:aws:s3:::<engineering-site-bucket-name>",
+        "arn:aws:s3:::<engineering-site-bucket-name>/*"
       ]
     },
     {

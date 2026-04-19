@@ -8,6 +8,73 @@ Use this file for fast, low-friction capture when an idea appears before it is r
 
 ## Open
 
+- Article TODO: “Splitting a personal site into a professional engineering portfolio”
+  - [ ] Decide the article framing (architecture decision write-up vs. devlog) + target reader (solo builder, engineer evaluating their own portfolio, AWS flat-rate plan user)
+  - [ ] Open with the human problem: a reviewer told me the personal site mixed podcasts, anime reviews, and civic essays with engineering work, which confused hiring managers who wanted a clean engineering snapshot
+  - [ ] Capture the original design (separate `engineer.formoseaniap.com` subdomain with its own CloudFront distribution and its own TLS cert)
+  - [ ] Explain why the subdomain approach was attractive (clean visual separation, independent cache invalidation, independent TLS lifecycle, different `site-eng/` S3 bucket)
+  - [ ] Capture the pivot: AWS CloudFront flat-rate Free plan allows **3 distributions per account** and that limit cannot be increased, so using 2 of them on one portfolio left only 1 slot for every future project
+  - [ ] Document the decision criteria: cost is $0 either way on the Free plan, the real constraint is future distribution-slot budget
+  - [ ] Walk through the final design (single CloudFront distribution, two S3 buckets, ordered cache behavior on `/engineer/*`, CloudFront Function strips the `/engineer` prefix before forwarding to the engineering S3 origin, no new ACM cert, no new Route 53 records)
+  - [ ] Include the CloudFront Function code sample (5 lines of JS) and explain the URI-rewrite approach vs. the more complex `Host`-header-based rewrite that would be required for true multi-domain on one distribution
+  - [ ] Note the subtle S3 layout choice: engineering bucket stores files at the root (e.g. `articles.html`), not under an `engineer/` prefix, because the CloudFront Function strips the prefix before the origin sees the path. This keeps the engineering bucket mirror-able with a plain `site-eng/` directory in the repo.
+  - [ ] Explain the analytics backend change that rode along with the split: adding a `domain` field (`main` vs `engineering`) to every collect event, domain-scoped DynamoDB partition keys (`PAGE#home#main` and `SITE#ALL#main` / `SITE#ALL#engineering` plus the combined `SITE#ALL`), and a domain filter in the admin dashboard so each site’s traffic can be compared
+  - [ ] Document the backward-compat rule that let the schema migration be zero-downtime: new events use the new domain-scoped keys, existing items without a `domain` attribute are treated as `main` by the admin reader
+  - [ ] End with “rules of thumb”: when to reach for a subdomain vs. a path prefix on a static site, how to think about CDN distribution budgets on flat-rate plans, when to let a CloudFront Function do the routing vs. going full Lambda@Edge
+  - [ ] Add a short “what I’d do differently next time” note: lock the distribution budget constraint in before picking the public URL shape, not after
+  - Content split between the two sides
+    - [ ] Describe the content model: the main site keeps podcasts, artworks, personal essays, a personal About; the engineering section at `/engineer/` gets the CV-derived landing page, technical-only article filtering, and a projects page aimed at hiring managers
+    - [ ] Document the build-script change: `scripts/build_articles.py` now produces two output sets (`site/data/` with all articles, `site-eng/data/` with `category: technical` only) from the same Markdown source
+    - [ ] Capture the About page rewrite decision: the main About moves to a personal, philosophy-background voice; CV-like professional content (skills, certifications, work history, experience bullets) moves onto the engineering landing page where it belongs
+  - Cross-linking and navigation between sections
+    - [ ] Note the cross-link pattern: every main-site page header has an “Engineering” link to `/engineer/`, and every engineering page header has a “Main Site” link back to `/`
+    - [ ] Call out that because both sections share one domain, the cross-links are ordinary internal hrefs (`/engineer/` and `/`) rather than absolute cross-domain URLs — one of the real wins of the single-distribution approach
+  - Local preview parity with production
+    - [ ] Explain the local dev trap: the production CloudFront Function silently strips `/engineer` but `python3 scripts/site_preview.py` is just a `SimpleHTTPRequestHandler` serving `site/`, so `/engineer/*` would 404 locally without doing anything
+    - [ ] Document the fix: extend `scripts/site_preview.py` with a `translate_path` override that routes `/engineer/*` to `site-eng/` and strips the prefix, mirroring what CloudFront does in production
+    - [ ] Mention the debugging lesson: a local preview that doesn’t match production behavior creates fake bugs and hides real ones; investing in parity is worth it
+  - CI/CD and OIDC policy updates
+    - [ ] Record the pipeline change: `push-main.yml` now reads `engineering_site_bucket_name` from Terraform outputs, writes the shared `analytics.config.json` into both site trees, syncs `site-eng/` to the engineering bucket, and lets the existing `/*` invalidation cover both (one distribution, one invalidation)
+    - [ ] Note the OIDC policy change: only the engineering S3 bucket ARN needed to be added to the existing statements; no new CloudFront, ACM, or Route 53 permissions were required because the second distribution and new cert that would have needed them were designed away
+
+- Article TODO: “The portfolio layout debugging iteration — why `text-align: left` looks wrong and how I finally fixed it”
+  - [ ] Decide the article framing (debugging devlog with screenshots) + target reader (self-taught frontend developers, anyone shipping a static portfolio on a 1024-1280px viewport and seeing too much dead space)
+  - [ ] Open with the reader’s confusion: looking at a hero that says “Platform Engineer with 4+ years of experience operating **distributed**” and wondering why the line broke before the container edge when there was visibly empty space on the right
+  - [ ] Collect the 3-4 most illustrative before/after screenshots (engineering landing hero, engineering projects hero, article body with an ASCII table, professional experience bullets)
+  - [ ] Walk the reader through each layout problem in the order I hit them, so they can see the debugging process and not just the final CSS
+  - Stage 1: the “ragged right edge” instinct
+    - [ ] Explain the initial intuition: add `text-align: justify` so the browser stretches word-spacing to fill each line
+    - [ ] Document why I rejected justify: unhyphenated English creates visible “river” gaps between words, accessibility research prefers left-aligned for long-form reading, and the reference sites I linked ([p5aholic.me](https://p5aholic.me/), [shoya-kajita.com](https://shoya-kajita.com/), [edwinle.com](https://edwinle.com/)) all use left-aligned body text deliberately
+    - [ ] Note what I added instead as a low-cost win: `text-wrap: pretty` on paragraphs globally (Chrome 117+, Safari 17.4+, Firefox 121+) to balance the last few lines of a paragraph and avoid orphan words, with no river-gap downside
+  - Stage 2: the measure-cap misfire
+    - [ ] Describe the symptom: my second attempt was “cap prose at a reading-comfortable 65-70 characters per line” using `max-width: 65ch` on hero copy, `max-width: 70ch` on article paragraphs, and `max-width: 70ch` on timeline card bullets
+    - [ ] Explain the result: the user sent a screenshot showing the caps making things *worse*, because at my `~1000px` card width, the `70ch` cap (`~560px` at the body font size) left nearly half the card empty on the right
+    - [ ] Capture the lesson: typographic measure caps like `50-75ch` are a reading-comfort rule for **columns wider than that measure**, not a universal “make prose look nice” rule. If your container is already narrower than `70ch`, the cap does nothing. If it’s wider, the cap creates dead space.
+    - [ ] Document the rollback: removed the caps from `.hero-copy > p`, `.article-content p`, `.timeline li.card > p`, and `.timeline li.card ul li`, kept `text-wrap: pretty` because that costs nothing and still helps
+  - Stage 3: the `.lead` cap surprise
+    - [ ] Explain the misconception I was operating under: `.lead` is a “short one-line tagline” class so the `56ch` cap is fine
+    - [ ] Show the counter-example: every `.lead` on the site was actually wrapping a 2-3 sentence subtitle, because every page template put the long summary paragraph in `.lead`. That’s why the engineering landing subtitle broke at “distributed” and “engineering” with space on the right: the `.lead` cap was sitting at `~56ch` while the column had room for `~85ch`
+    - [ ] Document the fix: loosen `.lead` from `56ch` to `85ch`. At the reader’s current viewport this fills the column naturally; on 4K displays it still stays within reading comfort
+    - [ ] Note the meta-lesson: “cap once, globally” is only safe when you know every place the class is used. When a class drifts from its original intent, spot-check every usage before tuning its constraint
+  - Stage 4: the missing page-specific hero grid rule
+    - [ ] Describe the bug: `/engineer/projects.html` had a three-line hero (“Real projects, / shaped by real / constraints.”) while `/projects.html` rendered it as one line on the same viewport, despite the HTML being virtually identical
+    - [ ] Walk through the diagnosis: the `.hero` section defaults to `grid-template-columns: 1.6fr 1fr` (designed for a sidebar layout). Pages with no sidebar must opt out with a page-specific rule keyed on `data-page`. The CSS had rules for `projects`, `eng-home`, and `about` — but none for `eng-projects` or `eng-articles`
+    - [ ] Document the fix: add `body[data-page="eng-projects"] .hero, body[data-page="eng-articles"] .hero { grid-template-columns: 1fr; }`
+    - [ ] Capture the meta-lesson: when cloning an existing page pattern to a new section, grep the CSS for every `data-page` selector the old pattern depends on and replicate the opt-outs
+  - Stage 5: the CSS Grid min-content trap
+    - [ ] Describe the symptom (the hardest bug in the set): on one specific article (a DevOps piece with a wide `DescribeNetworkInterfaces` ASCII table), paragraphs and headings rendered at ~50% of the card width while the ASCII table itself had horizontal scrolling
+    - [ ] Walk through the investigation: `.article-content` had no width constraint, no `max-width`, no `width: N%`. There was nothing obvious. The only differences between this article and ones that rendered correctly were the ASCII tables and several code blocks with 140+ char un-wrappable lines
+    - [ ] Explain the root cause after the dive: `.card` is `display: grid` with no explicit `grid-template-columns`. CSS Grid’s default implicit column uses `auto` sizing, which has `min-content` as its minimum. The `<pre>` block had a `min-content` equal to its widest unbreakable line, which was pushing the grid to reserve space for that line while `overflow-x: auto` then handled the actual scrolling. The net effect: paragraphs around the pre block inherited the constrained column width
+    - [ ] Document the fix: set `grid-template-columns: minmax(0, 1fr)` on `.card`. The `minmax(0, ...)` pattern is the canonical CSS Grid fix for “let the column shrink below min-content” — the 1fr track can fill the container while the `<pre>`’s `overflow-x: auto` still provides horizontal scroll for long lines
+    - [ ] Note why this was so hard to spot: nothing in the DOM looked wrong, nothing in the CSS had an obvious width constraint, the bug only surfaced on articles that happened to have wide pre content, and the visible *symptom* (narrow paragraphs) was nowhere near the *cause* (wide pre blocks in the same grid column)
+    - [ ] Capture the general rule: whenever you use `display: grid` on a container that holds user-generated or dynamic content, add `grid-template-columns: minmax(0, 1fr)` (or repeat that pattern per track) to prevent wide inline content from hijacking the column sizing
+  - Close with the debugging-process takeaways
+    - [ ] Layered fixes work: each stage narrowed the problem, even when earlier stages turned out to be wrong
+    - [ ] Read the reference sites’ CSS before inventing your own rules (they use left-aligned for a reason)
+    - [ ] Don’t reach for `justify` as the first fix — measure, column structure, and grid sizing explain 90% of apparent “text alignment” problems
+    - [ ] `minmax(0, 1fr)` on grid columns is a line of CSS that deserves a dedicated note in personal knowledge base — it’s the kind of fix that saves hours the next time
+    - [ ] Include a short visual glossary of the terms that mattered (measure, min-content, track sizing, text-wrap: pretty vs balance, text-align: justify river gaps)
+
 - Article TODO: “How I built this platform with VS Code (Copilot) / ‘vice coding’”
   - [ ] Decide the article framing (devlog vs. guide) + target reader (solo builder, infra-curious, content-migration pain)
   - [ ] List a simple timeline of milestones (first deploy → DNS → content import → CI/CD → stable prod)
