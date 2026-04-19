@@ -14,6 +14,13 @@ site/rss.xml
 site/zh/rss.xml
 site/assets/articles/
 
+# Engineering site generated outputs
+site-eng/data/articles/
+site-eng/data/articles.index.json
+site-eng/data/articles.search.json
+site-eng/rss.xml
+site-eng/assets/articles/
+
 # Logs
 *.log
 npm-debug.log*
@@ -45,3 +52,9 @@ Thumbs.db
 *.swo
 .vscode/
 .idea/
+
+# Kiro specs and workflow files
+.kiro/
+
+# Personal files
+Sean Iap CV.txt

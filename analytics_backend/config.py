@@ -5,7 +5,11 @@ from dataclasses import dataclass
 from functools import lru_cache
 
 
-ALLOWED_PAGE_KEYS = frozenset({"about", "articles", "artworks", "home", "podcasts", "projects"})
+ALLOWED_PAGE_KEYS = frozenset({
+    "about", "articles", "artworks", "home", "podcasts", "projects",
+    "eng-home", "eng-articles", "eng-projects",
+})
+ALLOWED_DOMAINS = frozenset({"main", "engineering"})
 ALLOWED_LANGS = frozenset({"en", "zh"})
 
 

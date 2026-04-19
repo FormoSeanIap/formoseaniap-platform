@@ -8,7 +8,7 @@ import boto3
 from boto3.dynamodb.conditions import Key
 
 from analytics_backend.collector import ValidationError, decode_cursor_offset, encode_cursor_offset
-from analytics_backend.config import Settings
+from analytics_backend.config import ALLOWED_DOMAINS, Settings
 from analytics_backend.http import json_response
 
 
@@ -58,6 +58,26 @@ def parse_limit(raw_limit: str | None) -> int:
     except ValueError as exc:
         raise ValidationError("limit must be an integer.") from exc
     return min(max(value, 1), 100)
+
+
+def parse_domain_filter(raw_domain: str | None) -> str | None:
+    if not raw_domain:
+        return None
+    if raw_domain not in ALLOWED_DOMAINS:
+        raise ValidationError("domain must be 'main', 'engineering', or omitted.")
+    return raw_domain
+
+
+def _get_item_domain(item: dict[str, Any]) -> str:
+    """Return the domain for an item, defaulting to 'main' for old-format items."""
+    return str(item.get("domain") or "main")
+
+
+def _matches_domain_filter(item: dict[str, Any], domain_filter: str | None) -> bool:
+    """Check if an item matches the given domain filter. Always True when no filter."""
+    if domain_filter is None:
+        return True
+    return _get_item_domain(item) == domain_filter
 
 
 def parse_groups_claim(claims: dict[str, Any]) -> list[str]:
@@ -140,7 +160,12 @@ def _item_unique_visitors(item: dict[str, Any]) -> int:
     return int(item.get("unique_visitors") or 0)
 
 
-def build_overview_payload(reader: DynamoAnalyticsReader, date_range: DateRange) -> dict[str, Any]:
+def build_overview_payload(
+    reader: DynamoAnalyticsReader,
+    date_range: DateRange,
+    *,
+    domain_filter: str | None = None,
+) -> dict[str, Any]:
     daily_rows = []
     totals = {
         "site_views": 0,
@@ -151,8 +176,20 @@ def build_overview_payload(reader: DynamoAnalyticsReader, date_range: DateRange)
 
     for current_day in date_range.days():
         items = reader.query_day(current_day)
-        site_item = next((item for item in items if item.get("pk") == "SITE#ALL"), None)
-        article_items = [item for item in items if item.get("entity_type") == "article"]
+
+        if domain_filter is not None:
+            # When filtering by domain, use the per-domain SITE#ALL#<domain> key
+            site_pk = f"SITE#ALL#{domain_filter}"
+            site_item = next((item for item in items if item.get("pk") == site_pk), None)
+            article_items = [
+                item for item in items
+                if item.get("entity_type") == "article" and _matches_domain_filter(item, domain_filter)
+            ]
+        else:
+            # Combined: use the aggregate SITE#ALL key
+            site_item = next((item for item in items if item.get("pk") == "SITE#ALL"), None)
+            article_items = [item for item in items if item.get("entity_type") == "article"]
+
         row = {
             "date": current_day.isoformat(),
             "site_views": _item_views(site_item or {}),
@@ -165,12 +202,15 @@ def build_overview_payload(reader: DynamoAnalyticsReader, date_range: DateRange)
         for key in totals:
             totals[key] += row[key]
 
-    return {
+    result: dict[str, Any] = {
         "from": date_range.start.isoformat(),
         "to": date_range.end.isoformat(),
         "summary": totals,
         "daily": daily_rows,
     }
+    if domain_filter is not None:
+        result["domain"] = domain_filter
+    return result
 
 
 def build_articles_payload(
@@ -180,6 +220,7 @@ def build_articles_payload(
     group_mode: str,
     limit: int,
     cursor: str | None,
+    domain_filter: str | None = None,
 ) -> dict[str, Any]:
     if group_mode not in ALLOWED_GROUP_MODES:
         raise ValidationError("group must be 'combined' or 'variant'.")
@@ -188,6 +229,8 @@ def build_articles_payload(
     for current_day in date_range.days():
         for item in reader.query_day(current_day):
             if item.get("entity_type") != "article":
+                continue
+            if not _matches_domain_filter(item, domain_filter):
                 continue
 
             article_id = str(item.get("entity_id") or "")
@@ -232,14 +275,27 @@ def build_article_detail_payload(
     date_range: DateRange,
     *,
     article_id: str,
+    domain_filter: str | None = None,
 ) -> dict[str, Any]:
     article_id = article_id.strip()
     if not article_id:
         raise ValidationError("article_id is required.")
 
-    per_language_items = {
-        lang: reader.query_entity_range(f"ARTICLE#{article_id}#{lang}", date_range) for lang in ("en", "zh")
-    }
+    # Determine which domain-scoped entity keys to query
+    domains_to_query = [domain_filter] if domain_filter else list(ALLOWED_DOMAINS)
+
+    per_language_items: dict[str, list[dict[str, Any]]] = {"en": [], "zh": []}
+    for lang in ("en", "zh"):
+        for domain in domains_to_query:
+            key = f"ARTICLE#{article_id}#{lang}#{domain}"
+            per_language_items[lang].extend(reader.query_entity_range(key, date_range))
+        # Also query old-format keys (no domain suffix) for backward compatibility
+        old_key = f"ARTICLE#{article_id}#{lang}"
+        old_items = reader.query_entity_range(old_key, date_range)
+        if old_items:
+            # Old-format items are treated as "main"
+            if domain_filter is None or domain_filter == "main":
+                per_language_items[lang].extend(old_items)
 
     daily = {
         current_day.isoformat(): {
@@ -249,6 +305,10 @@ def build_article_detail_payload(
                 "en": {"views": 0, "unique_visitors": 0},
                 "zh": {"views": 0, "unique_visitors": 0},
             },
+            "by_domain": {
+                "main": {"views": 0, "unique_visitors": 0},
+                "engineering": {"views": 0, "unique_visitors": 0},
+            },
         }
         for current_day in date_range.days()
     }
@@ -256,6 +316,10 @@ def build_article_detail_payload(
     by_language: dict[str, dict[str, Any]] = {
         "en": {"views": 0, "unique_visitors": 0},
         "zh": {"views": 0, "unique_visitors": 0},
+    }
+    by_domain: dict[str, dict[str, Any]] = {
+        "main": {"views": 0, "unique_visitors": 0},
+        "engineering": {"views": 0, "unique_visitors": 0},
     }
     combined = {"views": 0, "unique_visitors": 0}
 
@@ -267,23 +331,34 @@ def build_article_detail_payload(
 
             views = _item_views(item)
             unique_visitors = _item_unique_visitors(item)
+            item_domain = _get_item_domain(item)
+
             by_language[lang]["views"] += views
             by_language[lang]["unique_visitors"] += unique_visitors
             combined["views"] += views
             combined["unique_visitors"] += unique_visitors
+            by_domain[item_domain]["views"] += views
+            by_domain[item_domain]["unique_visitors"] += unique_visitors
+
             daily[item_date]["by_language"][lang]["views"] += views
             daily[item_date]["by_language"][lang]["unique_visitors"] += unique_visitors
             daily[item_date]["combined"]["views"] += views
             daily[item_date]["combined"]["unique_visitors"] += unique_visitors
+            daily[item_date]["by_domain"][item_domain]["views"] += views
+            daily[item_date]["by_domain"][item_domain]["unique_visitors"] += unique_visitors
 
-    return {
+    result: dict[str, Any] = {
         "article_id": article_id,
         "from": date_range.start.isoformat(),
         "to": date_range.end.isoformat(),
         "combined": combined,
         "by_language": by_language,
+        "by_domain": by_domain,
         "daily": list(daily.values()),
     }
+    if domain_filter is not None:
+        result["domain"] = domain_filter
+    return result
 
 
 def _claims_from_event(event: dict[str, Any]) -> dict[str, Any]:
@@ -326,9 +401,11 @@ def handle_admin_request(
         if route_key == "GET /analytics-api/admin/session":
             return json_response(200, _session_payload(claims))
 
+        domain_filter = parse_domain_filter(params.get("domain"))
+
         if route_key == "GET /analytics-api/admin/overview":
             date_range = parse_date_range(params)
-            return json_response(200, build_overview_payload(reader, date_range))
+            return json_response(200, build_overview_payload(reader, date_range, domain_filter=domain_filter))
 
         if route_key == "GET /analytics-api/admin/articles":
             date_range = parse_date_range(params)
@@ -343,6 +420,7 @@ def handle_admin_request(
                     group_mode=group_mode,
                     limit=limit,
                     cursor=cursor,
+                    domain_filter=domain_filter,
                 ),
             )
 
@@ -353,7 +431,9 @@ def handle_admin_request(
             ).get("article_id")
             return json_response(
                 200,
-                build_article_detail_payload(reader, date_range, article_id=str(article_id or "")),
+                build_article_detail_payload(
+                    reader, date_range, article_id=str(article_id or ""), domain_filter=domain_filter
+                ),
             )
     except ValidationError as exc:
         return json_response(400, {"error": str(exc)})
