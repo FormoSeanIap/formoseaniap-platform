@@ -82,9 +82,3 @@ variable "engineering_subdomain" {
   description = "Subdomain for the engineering portfolio site."
   type        = string
 }
-
-variable "engineering_site_bucket_name" {
-  default     = ""
-  description = "Optional explicit S3 bucket name for the engineering site. Defaults to a project/environment/account/region-based name."
-  type        = string
-}

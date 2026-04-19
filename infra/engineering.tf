@@ -1,11 +1,7 @@
 locals {
-  engineering_site_domain = "${var.engineering_subdomain}.${local.site_apex_domain}"
-  engineering_site_bucket_name = (
-    var.engineering_site_bucket_name != ""
-    ? var.engineering_site_bucket_name
-    : "${local.name_prefix}-engineering-site-${data.aws_caller_identity.current.account_id}-${var.aws_region}"
-  )
-  engineering_s3_origin_id = "${local.name_prefix}-engineering-site-s3"
+  engineering_site_domain      = "${var.engineering_subdomain}.${local.site_apex_domain}"
+  engineering_site_bucket_name = "${local.name_prefix}-eng-${data.aws_caller_identity.current.account_id}-${var.aws_region}"
+  engineering_s3_origin_id     = "${local.name_prefix}-engineering-site-s3"
 }
 
 resource "aws_s3_bucket" "engineering_site" {
