@@ -243,6 +243,13 @@ Source: [`docs/assets/readme/oidc-roles.mmd`](docs/assets/readme/oidc-roles.mmd)
 
 ## Local Development
 
+### Prerequisites
+
+- Python 3.14+ (standard library only — no pip dependencies needed for the build, audit, and preview scripts).
+- Terraform 1.10+ if you intend to run Terraform locally.
+
+### Running the preview
+
 Run the site preview and the podcast proxy in separate terminals when working locally. The site preview serves `site/` as the web root, and the podcast proxy keeps the podcast page working locally without depending on production routing.
 
 ```bash
