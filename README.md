@@ -43,8 +43,8 @@ The engineering section at `/engineer/` is served through the same CloudFront di
 The setup works as follows:
 
 1. An ordered cache behavior matches the `/engineer/*` path pattern and routes requests to a separate S3 origin containing the engineering site content.
-2. A CloudFront Function (`engineer-path-rewrite`) associated with that cache behavior strips the `/engineer` prefix from the request URI before forwarding to the engineering S3 origin. For example, `/engineer/articles` becomes `/articles` at the origin.
-3. The engineering S3 bucket stores files at the root level (e.g. `index.html`, `articles.html`), not under an `engineer/` prefix.
+2. Engineering site objects live under an `engineer/` prefix inside that private S3 bucket (e.g. `engineer/index.html`, `engineer/projects.html`). The request URI and the S3 object key use the same `/engineer/` path, which keeps the CloudFront cache key for engineering pages distinct from main-site pages at the equivalent filename.
+3. A CloudFront Function (`engineer-path-rewrite`) associated with the `/engineer/*` cache behavior only resolves directory-style requests to the matching `index.html` object (e.g. `/engineer/` → `/engineer/index.html`). It does not strip the `/engineer` prefix, because the CloudFront Free plan only allows AWS-managed cache policies and stripping the prefix would let `/engineer/projects.html` and `/projects.html` collide on the shared URI-only cache key.
 4. Both sections share the same analytics API backend. A `domain` field in each analytics event distinguishes traffic between the main site and the engineering section.
 
 ### Monitoring and alerts
@@ -116,7 +116,7 @@ The podcast feeds are owned by a third party, so the browser cannot rely on upst
 | Analytics storage | Lambda writes counters and uniqueness state to DynamoDB. |
 | Monitoring | CloudWatch dashboard and SNS-backed Lambda alarms are provisioned by Terraform. |
 | Custom domains | `www.formoseaniap.com` is the canonical host, with apex redirect support. |
-| Engineering content path | CloudFront routes `/engineer/*` to a separate S3 origin via a CloudFront Function that strips the `/engineer` prefix before forwarding to the engineering bucket. |
+| Engineering content path | CloudFront routes `/engineer/*` to a separate S3 origin. Object keys in that bucket keep the `engineer/` prefix so the CloudFront cache key for engineering pages stays distinct from main-site pages that share a filename. |
 | Engineering S3 bucket | A separate private S3 bucket holds the engineering section content, accessed through its own Origin Access Control on the same CloudFront distribution. |
 | Cost control | The stack uses AWS-managed CloudFront cache policies and keeps flat-rate CloudFront plan handling as a deliberate console-managed step. |
 
