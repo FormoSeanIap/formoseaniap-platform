@@ -64,6 +64,43 @@ resource "aws_cloudfront_function" "engineer_path_rewrite" {
   runtime = "cloudfront-js-2.0"
 }
 
+# Custom cache policy used only by the /engineer/* ordered cache behavior. The
+# CloudFront Function above rewrites /engineer/<path> to /<path> before the
+# request hits the engineering S3 origin, which means /engineer/projects.html
+# shares a rewritten URI (/projects.html) with the main site's /projects.html
+# served from the default cache behavior. Without including a differentiating
+# header in the cache key, the two behaviors' caches can collide and serve
+# each other's content. Whitelisting the x-origin header (set to
+# "engineering" by the rewrite function) scopes the engineering cache entries
+# separately from the default behavior's entries.
+resource "aws_cloudfront_cache_policy" "engineering_site" {
+  name        = "${local.name_prefix}-engineering-site-cache"
+  comment     = "Cache policy for the engineering S3 origin; keys on URI + x-origin header."
+  default_ttl = 86400
+  max_ttl     = 31536000
+  min_ttl     = 1
+
+  parameters_in_cache_key_and_forwarded_to_origin {
+    enable_accept_encoding_gzip   = true
+    enable_accept_encoding_brotli = true
+
+    cookies_config {
+      cookie_behavior = "none"
+    }
+
+    query_strings_config {
+      query_string_behavior = "none"
+    }
+
+    headers_config {
+      header_behavior = "whitelist"
+      headers {
+        items = ["x-origin"]
+      }
+    }
+  }
+}
+
 data "aws_iam_policy_document" "engineering_site_bucket" {
   statement {
     sid = "AllowCloudFrontRead"
