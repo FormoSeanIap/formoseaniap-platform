@@ -208,7 +208,7 @@ resource "aws_cloudfront_distribution" "site" {
 
   ordered_cache_behavior {
     allowed_methods        = ["GET", "HEAD"]
-    cache_policy_id        = aws_cloudfront_cache_policy.engineering_site.id
+    cache_policy_id        = var.static_site_cache_policy_id
     cached_methods         = ["GET", "HEAD"]
     compress               = true
     path_pattern           = "/engineer/*"
