@@ -1,126 +1,128 @@
 <!doctype html>
 <html lang="en">
-  <head>
-    <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <meta
-      name="description"
-      content="Real projects spanning workflow automation, full-stack product work, and the platform behind this site."
-    />
-    <title>Portfolio | Projects</title>
-    <script>
-      (() => {
-        try {
-          const preference = localStorage.getItem("theme-preference");
-          if (preference === "light" || preference === "dark") {
-            document.documentElement.dataset.theme = preference;
-          }
-        } catch (error) {}
-      })();
-    </script>
-    <link rel="preconnect" href="https://fonts.googleapis.com" />
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-    <link
-      href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;700&family=Noto+Sans+JP:wght@400;500&family=Noto+Serif+JP:wght@500;700&display=swap"
-      rel="stylesheet"
-    />
-    <link rel="stylesheet" href="assets/css/variables.css" />
-    <link rel="stylesheet" href="assets/css/base.css" />
-    <link rel="stylesheet" href="assets/css/layout.css" />
-    <link rel="stylesheet" href="assets/css/components.css" />
-  </head>
-  <body data-page="projects">
-    <header class="site-header">
-      <div class="site-shell header-row">
-        <a class="brand" href="index.html">
-          <strong>Sêng-Gān Ia̍p</strong>
-          <span>Platform Engineer / Writer / Creator</span>
-        </a>
-        <div class="header-actions">
-          <nav class="site-nav" aria-label="Main navigation">
-            <ul>
-              <li><a class="nav-link" data-nav="home" href="index.html">Home</a></li>
-              <li><a class="nav-link" data-nav="projects" href="projects.html">Projects</a></li>
-              <li><a class="nav-link" data-nav="podcasts" href="podcasts.html">Podcasts</a></li>
-              <li><a class="nav-link" data-nav="articles" href="articles.html">Articles</a></li>
-              <li><a class="nav-link" data-nav="about" href="about.html">About</a></li>
-            </ul>
-          </nav>
-          <div class="theme-switcher" role="group" aria-label="Color theme">
-            <span class="theme-switch-label">Theme</span>
-            <div class="theme-switch-options">
-              <button class="theme-option" type="button" data-theme-option="system" aria-pressed="false">Auto</button>
-              <button class="theme-option" type="button" data-theme-option="light" aria-pressed="false">Light</button>
-              <button class="theme-option" type="button" data-theme-option="dark" aria-pressed="false">Dark</button>
-            </div>
+
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="description"
+    content="Real projects spanning workflow automation, full-stack product work, and the platform behind this site." />
+  <title>Portfolio | Projects</title>
+  <script>
+    (() => {
+      try {
+        const preference = localStorage.getItem("theme-preference");
+        if (preference === "light" || preference === "dark") {
+          document.documentElement.dataset.theme = preference;
+        }
+      } catch (error) { }
+    })();
+  </script>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link
+    href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;700&family=Noto+Sans+JP:wght@400;500&family=Noto+Serif+JP:wght@500;700&display=swap"
+    rel="stylesheet" />
+  <link rel="stylesheet" href="assets/css/variables.css" />
+  <link rel="stylesheet" href="assets/css/base.css" />
+  <link rel="stylesheet" href="assets/css/layout.css" />
+  <link rel="stylesheet" href="assets/css/components.css" />
+</head>
+
+<body data-page="projects">
+  <header class="site-header">
+    <div class="site-shell header-row">
+      <a class="brand" href="index.html">
+        <strong>Sêng-Gān Ia̍p</strong>
+        <span>Platform Engineer / Writer / Creator</span>
+      </a>
+      <div class="header-actions">
+        <nav class="site-nav" aria-label="Main navigation">
+          <ul>
+            <li><a class="nav-link" data-nav="home" href="index.html">Home</a></li>
+            <li><a class="nav-link" data-nav="projects" href="projects.html">Projects</a></li>
+            <li><a class="nav-link" data-nav="podcasts" href="podcasts.html">Podcasts</a></li>
+            <li><a class="nav-link" data-nav="articles" href="articles.html">Articles</a></li>
+            <li><a class="nav-link" data-nav="about" href="about.html">About</a></li>
+            <li><a class="nav-link" href="/engineer/">Engineering</a></li>
+          </ul>
+        </nav>
+        <div class="theme-switcher" role="group" aria-label="Color theme">
+          <span class="theme-switch-label">Theme</span>
+          <div class="theme-switch-options">
+            <button class="theme-option" type="button" data-theme-option="system" aria-pressed="false">Auto</button>
+            <button class="theme-option" type="button" data-theme-option="light" aria-pressed="false">Light</button>
+            <button class="theme-option" type="button" data-theme-option="dark" aria-pressed="false">Dark</button>
           </div>
         </div>
       </div>
-    </header>
+    </div>
+  </header>
 
-    <main class="site-shell">
-      <section class="section hero project-hero">
-        <div class="hero-copy" data-reveal>
-          <p class="kicker">Projects</p>
-          <h1>Real projects, shaped by real constraints.</h1>
-          <p class="lead">
-            A focused set of work across platform engineering, workflow automation, and product delivery.
-          </p>
-          <p>
-            Some code is public now. Some is still private while I prepare it for release. The goal here is to show work honestly, not pad the page with generic demos.
-          </p>
+  <main class="site-shell">
+    <section class="section hero project-hero">
+      <div class="hero-copy" data-reveal>
+        <p class="kicker">Projects</p>
+        <h1>Real projects, shaped by real constraints.</h1>
+        <p class="lead">
+          A focused set of work across platform engineering, workflow automation, and product delivery.
+        </p>
+        <p>
+          Some code is public now. Some is still private while I prepare it for release. The goal here is to show work
+          honestly, not pad the page with generic demos.
+        </p>
+      </div>
+    </section>
+
+    <section class="section" aria-labelledby="projects-map-title">
+      <div class="section-head" data-reveal>
+        <div>
+          <p class="kicker">Project Map</p>
+          <h2 id="projects-map-title">Three threads running through the portfolio.</h2>
         </div>
-      </section>
+      </div>
 
-      <section class="section" aria-labelledby="projects-map-title">
-        <div class="section-head" data-reveal>
-          <div>
-            <p class="kicker">Project Map</p>
-            <h2 id="projects-map-title">Three threads running through the portfolio.</h2>
-          </div>
+      <div class="grid-3 project-overview-grid">
+        <article class="card project-overview-card" data-reveal data-delay="40">
+          <p class="meta">Current / This repo</p>
+          <h3>Platform</h3>
+          <p>Static-first site architecture, publishing flow, and deployment foundations.</p>
+        </article>
+
+        <article class="card project-overview-card" data-reveal data-delay="100">
+          <p class="meta">Private for now</p>
+          <h3>Workflow Automation</h3>
+          <p>Tools that compress repetitive job-search and application work into a cleaner system.</p>
+        </article>
+
+        <article class="card project-overview-card" data-reveal data-delay="160">
+          <p class="meta">2022 / Public repo</p>
+          <h3>Product Delivery</h3>
+          <p>Earlier full-stack work that still reflects how I scope, ship, and structure an application.</p>
+        </article>
+      </div>
+    </section>
+
+    <section class="section" aria-labelledby="projects-list-title">
+      <div class="section-head">
+        <div>
+          <p class="kicker">Selected Work</p>
+          <h2 id="projects-list-title">Projects that map the arc of my engineering work.</h2>
         </div>
+      </div>
+      <div class="grid-2" data-projects-list></div>
+      <div class="progressive-list-controls" data-projects-list-controls hidden></div>
+    </section>
+  </main>
 
-        <div class="grid-3 project-overview-grid">
-          <article class="card project-overview-card" data-reveal data-delay="40">
-            <p class="meta">Current / This repo</p>
-            <h3>Platform</h3>
-            <p>Static-first site architecture, publishing flow, and deployment foundations.</p>
-          </article>
+  <footer class="site-shell footer">
+    <p>Copyright <span data-year></span> Sêng-Gān Ia̍p</p>
+    <p>Selected projects updated continuously.</p>
+  </footer>
 
-          <article class="card project-overview-card" data-reveal data-delay="100">
-            <p class="meta">Private for now</p>
-            <h3>Workflow Automation</h3>
-            <p>Tools that compress repetitive job-search and application work into a cleaner system.</p>
-          </article>
+  <script src="assets/js/main.js"></script>
+  <script src="assets/js/progressive-list.js"></script>
+  <script src="assets/js/projects.js"></script>
+  <script src="assets/js/analytics.js"></script>
+</body>
 
-          <article class="card project-overview-card" data-reveal data-delay="160">
-            <p class="meta">2022 / Public repo</p>
-            <h3>Product Delivery</h3>
-            <p>Earlier full-stack work that still reflects how I scope, ship, and structure an application.</p>
-          </article>
-        </div>
-      </section>
-
-      <section class="section" aria-labelledby="projects-list-title">
-        <div class="section-head">
-          <div>
-            <p class="kicker">Selected Work</p>
-            <h2 id="projects-list-title">Projects that map the arc of my engineering work.</h2>
-          </div>
-        </div>
-        <div class="grid-2" data-projects-list></div>
-        <div class="progressive-list-controls" data-projects-list-controls hidden></div>
-      </section>
-    </main>
-
-    <footer class="site-shell footer">
-      <p>Copyright <span data-year></span> Sêng-Gān Ia̍p</p>
-      <p>Selected projects updated continuously.</p>
-    </footer>
-
-    <script src="assets/js/main.js"></script>
-    <script src="assets/js/progressive-list.js"></script>
-    <script src="assets/js/projects.js"></script>
-    <script src="assets/js/analytics.js"></script>
-  </body>
 </html>

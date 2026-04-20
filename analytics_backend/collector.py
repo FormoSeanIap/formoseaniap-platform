@@ -12,7 +12,7 @@ from typing import Any
 import boto3
 from botocore.exceptions import ClientError
 
-from analytics_backend.config import ALLOWED_LANGS, ALLOWED_PAGE_KEYS, Settings
+from analytics_backend.config import ALLOWED_DOMAINS, ALLOWED_LANGS, ALLOWED_PAGE_KEYS, Settings
 from analytics_backend.http import json_response
 
 
@@ -30,12 +30,13 @@ class ViewEvent:
     article_id: str | None
     lang: str | None
     visitor_id: str
+    domain: str
 
     @property
     def entity_key(self) -> str:
         if self.scope == "page":
-            return f"PAGE#{self.page_key}"
-        return f"ARTICLE#{self.article_id}#{self.lang}"
+            return f"PAGE#{self.page_key}#{self.domain}"
+        return f"ARTICLE#{self.article_id}#{self.lang}#{self.domain}"
 
     @property
     def entity_type(self) -> str:
@@ -79,6 +80,12 @@ def validate_view_event(payload: dict[str, Any]) -> ViewEvent:
     if visitor_id is None or not VISITOR_ID_RE.fullmatch(visitor_id):
         raise ValidationError("visitor_id must be a UUID-like string.")
 
+    domain = _coerce_nullable_string(payload.get("domain"))
+    if domain is None:
+        raise ValidationError("domain is required.")
+    if domain not in ALLOWED_DOMAINS:
+        raise ValidationError("domain must be 'main' or 'engineering'.")
+
     page_key = _coerce_nullable_string(payload.get("page_key"))
     article_id = _coerce_nullable_string(payload.get("article_id"))
     lang = _coerce_nullable_string(payload.get("lang"))
@@ -102,6 +109,7 @@ def validate_view_event(payload: dict[str, Any]) -> ViewEvent:
         article_id=article_id,
         lang=lang,
         visitor_id=visitor_id,
+        domain=domain,
     )
 
 
@@ -179,6 +187,7 @@ class DynamoCollectorStore:
         entity_type: str,
         entity_id: str,
         lang: str | None,
+        domain: str | None,
         unique_increment: int,
     ) -> None:
         try:
@@ -189,17 +198,19 @@ class DynamoCollectorStore:
                 },
                 UpdateExpression=(
                     "SET entity_type = :entity_type, entity_id = :entity_id, #lang = :lang, "
-                    "#date = :date, gsi1pk = :gsi1pk, gsi1sk = :gsi1sk "
+                    "#date = :date, gsi1pk = :gsi1pk, gsi1sk = :gsi1sk, #domain = :domain "
                     "ADD #views :views, #unique_visitors :unique_visitors"
                 ),
                 ExpressionAttributeNames={
                     "#date": "date",
+                    "#domain": "domain",
                     "#lang": "lang",
                     "#unique_visitors": "unique_visitors",
                     "#views": "views",
                 },
                 ExpressionAttributeValues={
                     ":date": day_value,
+                    ":domain": domain,
                     ":entity_id": entity_id,
                     ":entity_type": entity_type,
                     ":gsi1pk": day_key,
@@ -232,38 +243,58 @@ class DynamoCollectorStore:
         )
 
         entity_unique_key = event.entity_key
-        site_unique_key = "SITE#ALL"
+        site_domain_unique_key = f"SITE#ALL#{event.domain}"
+        site_combined_unique_key = "SITE#ALL"
         counter_targets = [
             {
                 "entity_key": event.entity_key,
                 "entity_type": event.entity_type,
                 "entity_id": event.entity_id,
                 "lang": event.lang,
+                "domain": event.domain,
+            },
+            {
+                "entity_key": f"SITE#ALL#{event.domain}",
+                "entity_type": "site",
+                "entity_id": "ALL",
+                "lang": None,
+                "domain": event.domain,
             },
             {
                 "entity_key": "SITE#ALL",
                 "entity_type": "site",
                 "entity_id": "ALL",
                 "lang": None,
+                "domain": None,
             },
         ]
 
+        entity_unique = self._claim_unique(
+            entity_key=entity_unique_key,
+            day_key=day_key,
+            hashed_visitor_id=hashed_visitor_id,
+            expires_at=expires_at,
+        )
+        site_domain_unique = self._claim_unique(
+            entity_key=site_domain_unique_key,
+            day_key=day_key,
+            hashed_visitor_id=hashed_visitor_id,
+            expires_at=expires_at,
+        )
+        site_combined_unique = self._claim_unique(
+            entity_key=site_combined_unique_key,
+            day_key=day_key,
+            hashed_visitor_id=hashed_visitor_id,
+            expires_at=expires_at,
+        )
+
         result = {
-            "entity_unique": self._claim_unique(
-                entity_key=entity_unique_key,
-                day_key=day_key,
-                hashed_visitor_id=hashed_visitor_id,
-                expires_at=expires_at,
-            ),
-            "site_unique": self._claim_unique(
-                entity_key=site_unique_key,
-                day_key=day_key,
-                hashed_visitor_id=hashed_visitor_id,
-                expires_at=expires_at,
-            ),
+            "entity_unique": entity_unique,
+            "site_unique": site_domain_unique,
         }
 
-        for target, is_unique in zip(counter_targets, [result["entity_unique"], result["site_unique"]], strict=True):
+        unique_flags = [entity_unique, site_domain_unique, site_combined_unique]
+        for target, is_unique in zip(counter_targets, unique_flags, strict=True):
             self._increment_counter(
                 entity_key=target["entity_key"],
                 day_key=day_key,
@@ -271,6 +302,7 @@ class DynamoCollectorStore:
                 entity_type=target["entity_type"],
                 entity_id=target["entity_id"],
                 lang=target["lang"],
+                domain=target["domain"],
                 unique_increment=1 if is_unique else 0,
             )
 

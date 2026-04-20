@@ -1,90 +1,90 @@
 <!doctype html>
 <html lang="en">
-  <head>
-    <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <meta
-      name="description"
-      content="Personal portfolio platform for cloud engineering, writing, and creative work."
-    />
-    <title>Portfolio | Home</title>
-    <script>
-      (() => {
-        try {
-          const preference = localStorage.getItem("theme-preference");
-          if (preference === "light" || preference === "dark") {
-            document.documentElement.dataset.theme = preference;
-          }
-        } catch (error) {}
-      })();
-    </script>
-    <link rel="preconnect" href="https://fonts.googleapis.com" />
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-    <link
-      href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;700&family=Noto+Sans+JP:wght@400;500&family=Noto+Serif+JP:wght@500;700&display=swap"
-      rel="stylesheet"
-    />
-    <link rel="stylesheet" href="assets/css/variables.css" />
-    <link rel="stylesheet" href="assets/css/base.css" />
-    <link rel="stylesheet" href="assets/css/layout.css" />
-    <link rel="stylesheet" href="assets/css/components.css" />
-  </head>
-  <body data-page="home">
-    <header class="site-header">
-      <div class="site-shell header-row">
-        <a class="brand" href="index.html">
-          <strong>Sêng-Gān Ia̍p</strong>
-          <span>Platform Engineer / Writer / Creator</span>
-        </a>
-        <div class="header-actions">
-          <nav class="site-nav" aria-label="Main navigation">
-            <ul>
-              <li><a class="nav-link" data-nav="home" href="index.html">Home</a></li>
-              <li><a class="nav-link" data-nav="projects" href="projects.html">Projects</a></li>
-              <li><a class="nav-link" data-nav="podcasts" href="podcasts.html">Podcasts</a></li>
-              <li><a class="nav-link" data-nav="articles" href="articles.html">Articles</a></li>
-              <li><a class="nav-link" data-nav="about" href="about.html">About</a></li>
-            </ul>
-          </nav>
-          <div class="theme-switcher" role="group" aria-label="Color theme">
-            <span class="theme-switch-label">Theme</span>
-            <div class="theme-switch-options">
-              <button class="theme-option" type="button" data-theme-option="system" aria-pressed="false">Auto</button>
-              <button class="theme-option" type="button" data-theme-option="light" aria-pressed="false">Light</button>
-              <button class="theme-option" type="button" data-theme-option="dark" aria-pressed="false">Dark</button>
-            </div>
+
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="description" content="Personal portfolio platform for cloud engineering, writing, and creative work." />
+  <title>Portfolio | Home</title>
+  <script>
+    (() => {
+      try {
+        const preference = localStorage.getItem("theme-preference");
+        if (preference === "light" || preference === "dark") {
+          document.documentElement.dataset.theme = preference;
+        }
+      } catch (error) { }
+    })();
+  </script>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link
+    href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;700&family=Noto+Sans+JP:wght@400;500&family=Noto+Serif+JP:wght@500;700&display=swap"
+    rel="stylesheet" />
+  <link rel="stylesheet" href="assets/css/variables.css" />
+  <link rel="stylesheet" href="assets/css/base.css" />
+  <link rel="stylesheet" href="assets/css/layout.css" />
+  <link rel="stylesheet" href="assets/css/components.css" />
+</head>
+
+<body data-page="home">
+  <header class="site-header">
+    <div class="site-shell header-row">
+      <a class="brand" href="index.html">
+        <strong>Sêng-Gān Ia̍p</strong>
+        <span>Platform Engineer / Writer / Creator</span>
+      </a>
+      <div class="header-actions">
+        <nav class="site-nav" aria-label="Main navigation">
+          <ul>
+            <li><a class="nav-link" data-nav="home" href="index.html">Home</a></li>
+            <li><a class="nav-link" data-nav="projects" href="projects.html">Projects</a></li>
+            <li><a class="nav-link" data-nav="podcasts" href="podcasts.html">Podcasts</a></li>
+            <li><a class="nav-link" data-nav="articles" href="articles.html">Articles</a></li>
+            <li><a class="nav-link" data-nav="about" href="about.html">About</a></li>
+            <li><a class="nav-link" href="/engineer/">Engineering</a></li>
+          </ul>
+        </nav>
+        <div class="theme-switcher" role="group" aria-label="Color theme">
+          <span class="theme-switch-label">Theme</span>
+          <div class="theme-switch-options">
+            <button class="theme-option" type="button" data-theme-option="system" aria-pressed="false">Auto</button>
+            <button class="theme-option" type="button" data-theme-option="light" aria-pressed="false">Light</button>
+            <button class="theme-option" type="button" data-theme-option="dark" aria-pressed="false">Dark</button>
           </div>
         </div>
       </div>
-    </header>
+    </div>
+  </header>
 
-    <main class="site-shell landing-main">
-      <div class="home-landing-wrap">
-        <section class="landing" aria-label="Landing animation and page links">
-          <div class="landing-canvas" id="landing-canvas" aria-hidden="true"></div>
-          <div class="landing-overlay" data-reveal data-delay="40">
-            <h1 class="landing-title">Sêng-Gān Ia̍p</h1>
-            <p class="landing-subtitle">
-              Reliable systems. Thoughtful writing. Open learning.
-            </p>
-            <nav class="landing-links" aria-label="Landing destinations">
-              <a class="landing-link" href="about.html">About</a>
-              <a class="landing-link" href="projects.html">Projects</a>
-              <a class="landing-link" href="podcasts.html">Podcasts</a>
-              <a class="landing-link" href="articles.html">Articles</a>
-              <!-- <a class="landing-link" href="artworks.html">Artworks</a> -->
-            </nav>
-          </div>
-        </section>
-      </div>
-    </main>
+  <main class="site-shell landing-main">
+    <div class="home-landing-wrap">
+      <section class="landing" aria-label="Landing animation and page links">
+        <div class="landing-canvas" id="landing-canvas" aria-hidden="true"></div>
+        <div class="landing-overlay" data-reveal data-delay="40">
+          <h1 class="landing-title">Sêng-Gān Ia̍p</h1>
+          <p class="landing-subtitle">
+            Reliable systems. Thoughtful writing. Open learning.
+          </p>
+          <nav class="landing-links" aria-label="Landing destinations">
+            <a class="landing-link" href="about.html">About</a>
+            <a class="landing-link" href="projects.html">Projects</a>
+            <a class="landing-link" href="podcasts.html">Podcasts</a>
+            <a class="landing-link" href="articles.html">Articles</a>
+            <!-- <a class="landing-link" href="artworks.html">Artworks</a> -->
+          </nav>
+        </div>
+      </section>
+    </div>
+  </main>
 
-    <footer class="site-shell footer">
-      <p>Copyright <span data-year></span> Sêng-Gān Ia̍p</p>
-      <p>Personal platform in active evolution.</p>
-    </footer>
+  <footer class="site-shell footer">
+    <p>Copyright <span data-year></span> Sêng-Gān Ia̍p</p>
+    <p>Personal platform in active evolution.</p>
+  </footer>
 
-    <script src="assets/js/main.js"></script>
-    <script src="assets/js/analytics.js"></script>
-  </body>
+  <script src="assets/js/main.js"></script>
+  <script src="assets/js/analytics.js"></script>
+</body>
+
 </html>

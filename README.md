@@ -1,6 +1,6 @@
 # Formoseaniap Platform
 
-Static-first personal portfolio platform for writing, projects, podcasts, and a small private analytics surface.
+Static-first personal portfolio platform for writing, projects, podcasts, and a small private analytics surface. A dedicated engineering section at [`/engineer/`](https://www.formoseaniap.com/engineer/) presents a professional engineering portfolio under the same domain.
 
 Live site: [https://www.formoseaniap.com/](https://www.formoseaniap.com/)
 
@@ -14,13 +14,14 @@ Live site: [https://www.formoseaniap.com/](https://www.formoseaniap.com/)
 
 | Area | What it does |
 | --- | --- |
-| Site delivery | Static pages are served from a private S3 bucket through CloudFront. |
+| Site delivery | Static pages are served from private S3 buckets through a single CloudFront distribution. The main site and engineering section each have their own S3 origin. |
 | Edge protection | AWS WAF sits at the CloudFront layer for rate limiting and edge filtering. |
-| Writing pipeline | Markdown in `content/articles/**` is built into JSON and RSS artifacts under `site/data/`. |
+| Writing pipeline | Markdown in `content/articles/**` is built into JSON and RSS artifacts under `site/data/` (all articles) and `site-eng/data/` (technical articles only). |
 | Podcast page | The browser reads podcast feeds through the same CloudFront domain so third-party CORS restrictions do not break the page. |
 | Backend | A small analytics/admin backend uses CloudFront + API Gateway + Lambda + DynamoDB. |
 | Auth | The private analytics page uses Cognito managed login with Authorization Code + PKCE. |
 | DNS | Cloudflare is still the live DNS provider today; Route 53 is the planned future authoritative DNS home. |
+| Engineering section | A professional engineering portfolio at `/engineer/` is served through the same CloudFront distribution using path-based routing with a separate S3 origin. |
 | Deployments | GitHub Actions validates, plans, previews, and promotes production through AWS OIDC role assumption. |
 
 ## Architecture
@@ -34,6 +35,17 @@ Sources:
 - [`docs/assets/readme/architecture.drawio`](docs/assets/readme/architecture.drawio)
 
 Current DNS note: the diagram shows the target DNS design with Route 53, but the live domain is still using Cloudflare today. Route 53 is the planned destination once the DNS migration is finished.
+
+### Path-based routing for the engineering section
+
+The engineering section at `/engineer/` is served through the same CloudFront distribution as the main site. A single distribution with path-based routing was chosen over a separate distribution to preserve CloudFront Free plan distribution slots (the Free plan allows 3 per account).
+
+The setup works as follows:
+
+1. An ordered cache behavior matches the `/engineer/*` path pattern and routes requests to a separate S3 origin containing the engineering site content.
+2. A CloudFront Function (`engineer-path-rewrite`) associated with that cache behavior strips the `/engineer` prefix from the request URI before forwarding to the engineering S3 origin. For example, `/engineer/articles` becomes `/articles` at the origin.
+3. The engineering S3 bucket stores files at the root level (e.g. `index.html`, `articles.html`), not under an `engineer/` prefix.
+4. Both sections share the same analytics API backend. A `domain` field in each analytics event distinguishes traffic between the main site and the engineering section.
 
 ### Monitoring and alerts
 ![AWS architecture diagram for monitoring and alerts](docs/assets/readme/monitoring.png)
@@ -104,6 +116,8 @@ The podcast feeds are owned by a third party, so the browser cannot rely on upst
 | Analytics storage | Lambda writes counters and uniqueness state to DynamoDB. |
 | Monitoring | CloudWatch dashboard and SNS-backed Lambda alarms are provisioned by Terraform. |
 | Custom domains | `www.formoseaniap.com` is the canonical host, with apex redirect support. |
+| Engineering content path | CloudFront routes `/engineer/*` to a separate S3 origin via a CloudFront Function that strips the `/engineer` prefix before forwarding to the engineering bucket. |
+| Engineering S3 bucket | A separate private S3 bucket holds the engineering section content, accessed through its own Origin Access Control on the same CloudFront distribution. |
 | Cost control | The stack uses AWS-managed CloudFront cache policies and keeps flat-rate CloudFront plan handling as a deliberate console-managed step. |
 
 ## Cost Estimate
@@ -115,9 +129,9 @@ This estimate is a rough order-of-magnitude view of the production stack cost as
 | Item | Assumption | Estimated cost |
 | --- | --- | --- |
 | Domain registration | Third-party registrar cost for `formoseaniap.com` | about `$15/year` or `$1.25/month` |
-| CloudFront flat-rate plan | Free tier with one distribution | `$0/month` |
+| CloudFront flat-rate plan | Free tier with one distribution (serves both the main site and the engineering section via path-based routing) | `$0/month` |
 | Route 53 hosted zone | `$0` when attached to the CloudFront plan, otherwise standard Route 53 pricing applies | `$0` or about `$0.50/month` plus DNS queries |
-| S3 site storage | Local site output is well below the Free plan's included `5 GB` of S3 Standard credits | effectively `$0/month` at current size |
+| S3 site storage (main + engineering) | Both site buckets combined are well below the Free plan's included `5 GB` of S3 Standard credits. The engineering section adds a second bucket but no meaningful storage cost at current scale. | effectively `$0/month` at current size |
 | Cognito admin login | Admin-only access pattern, expected to stay far below the standard MAU threshold for meaningful cost | effectively `$0/month` at current scale |
 | CloudWatch dashboard and alarms | One dashboard and two alarms, which fit comfortably inside small-scale usage | effectively `$0/month` at current scale |
 | SNS alarm email delivery | Only sends when alarms trigger | near `$0/month` unless alarms become noisy |
@@ -168,7 +182,7 @@ In practice, that means the predictable cost risk at this scale is mostly the re
 | --- | --- | --- |
 | [`push-others.yml`](.github/workflows/push-others.yml) | `develop` and work branches | Validate the site, rebuild generated artifacts, and run Terraform validation plus optional plan on infra changes. |
 | [`pr-validate.yml`](.github/workflows/pr-validate.yml) | Pull requests into `develop` or `main` | Re-run validation, attach a preview artifact, and optionally deploy a hosted preview after Terraform checks pass. |
-| [`push-main.yml`](.github/workflows/push-main.yml) | Push to `main` | Re-run validation, wait at the protected `prod` environment, run production Terraform plan/apply, write runtime config, deploy the site, and invalidate CloudFront. |
+| [`push-main.yml`](.github/workflows/push-main.yml) | Push to `main` | Re-run validation, wait at the protected `prod` environment, run production Terraform plan/apply, write runtime config, deploy both `site/` and `site-eng/` to their respective S3 buckets, and invalidate CloudFront. |
 
 ```mermaid
 flowchart LR
@@ -180,7 +194,7 @@ flowchart LR
   PRValidate --> Validate2[Validate + preview artifact or preview deploy]
   PushMain --> Gate[Protected prod environment]
   Gate --> TFApply[Terraform plan and apply]
-  TFApply --> Deploy[Sync site to S3]
+  TFApply --> Deploy[Sync site + site-eng to S3]
   Deploy --> Invalidate[CloudFront invalidation]
 ```
 
@@ -218,7 +232,8 @@ Source: [`docs/assets/readme/oidc-roles.mmd`](docs/assets/readme/oidc-roles.mmd)
 
 | Path | Purpose |
 | --- | --- |
-| `site/` | Static pages, assets, and generated runtime data consumed by the browser. |
+| `site/` | Static pages, assets, and generated runtime data for the main site. |
+| `site-eng/` | Static pages, assets, and generated runtime data for the engineering section at `/engineer/`. |
 | `content/` | Markdown articles and site metadata. |
 | `scripts/` | Build, validation, migration, and local utility scripts. |
 | `analytics_backend/` | Lambda handler code for analytics collection and admin reads. |

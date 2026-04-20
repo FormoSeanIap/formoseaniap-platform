@@ -6,13 +6,20 @@ Supports two content styles:
 1) Frontmatter-driven files (new schema)
 2) Legacy nested files without frontmatter (metadata inferred from path + content)
 
-Outputs:
+Outputs (main site — all articles):
 - site/data/articles.index.json
 - site/data/articles.search.json
 - site/data/articles/<lang>/<id>.json
 - site/rss.xml
 - site/zh/rss.xml
 - copied article assets under site/assets/articles/
+
+Outputs (engineering site — technical articles only):
+- site-eng/data/articles.index.json
+- site-eng/data/articles.search.json
+- site-eng/data/articles/<lang>/<id>.json
+- site-eng/rss.xml
+- copied technical article assets under site-eng/assets/articles/
 """
 
 from __future__ import annotations
@@ -42,6 +49,15 @@ INDEX_PATH = DATA_DIR / "articles.index.json"
 SEARCH_INDEX_PATH = DATA_DIR / "articles.search.json"
 RSS_EN_PATH = SITE_DIR / "rss.xml"
 RSS_ZH_PATH = SITE_DIR / "zh" / "rss.xml"
+
+# Engineering site output paths (technical articles only)
+ENG_SITE_DIR = ROOT / "site-eng"
+ENG_DATA_DIR = ENG_SITE_DIR / "data"
+ENG_ARTICLES_DATA_DIR = ENG_DATA_DIR / "articles"
+ENG_ASSETS_ARTICLES_DIR = ENG_SITE_DIR / "assets" / "articles"
+ENG_INDEX_PATH = ENG_DATA_DIR / "articles.index.json"
+ENG_SEARCH_INDEX_PATH = ENG_DATA_DIR / "articles.search.json"
+ENG_RSS_PATH = ENG_SITE_DIR / "rss.xml"
 
 SUPPORTED_LANGS = {"en", "zh"}
 SUPPORTED_CATEGORIES = {"technical", "review", "other"}
@@ -935,6 +951,40 @@ def copy_assets() -> None:
         shutil.copy2(path, dst)
 
 
+def copy_engineering_assets(records: list[ArticleRecord]) -> None:
+    """Copy assets only for technical articles to the engineering site."""
+    if ENG_ASSETS_ARTICLES_DIR.exists():
+        shutil.rmtree(ENG_ASSETS_ARTICLES_DIR)
+    ENG_ASSETS_ARTICLES_DIR.mkdir(parents=True, exist_ok=True)
+
+    technical_dirs: set[Path] = set()
+    for record in records:
+        if record.meta.get("category") != "technical":
+            continue
+        source_abs = CONTENT_DIR / record.source_rel
+        technical_dirs.add(source_abs.parent)
+
+    for path in CONTENT_DIR.rglob("*"):
+        if not path.is_file():
+            continue
+        if path.suffix.lower() == ".md":
+            continue
+        if not any(path.parent == d or d in path.parents for d in technical_dirs):
+            continue
+        rel = path.relative_to(CONTENT_DIR)
+        dst = ENG_ASSETS_ARTICLES_DIR / rel
+        dst.parent.mkdir(parents=True, exist_ok=True)
+        shutil.copy2(path, dst)
+
+
+def ensure_engineering_output_dirs() -> None:
+    """Create engineering site output directories."""
+    ENG_DATA_DIR.mkdir(parents=True, exist_ok=True)
+    if ENG_ARTICLES_DATA_DIR.exists():
+        shutil.rmtree(ENG_ARTICLES_DATA_DIR)
+    ENG_ARTICLES_DATA_DIR.mkdir(parents=True, exist_ok=True)
+
+
 def validate_content_asset_paths() -> None:
     for path in CONTENT_DIR.rglob("*"):
         if not path.is_file():
@@ -1315,6 +1365,74 @@ def write_outputs(payloads: dict[str, Any], site_config: dict[str, str]) -> None
     write_rss(payloads["index"], site_config)
 
 
+def build_engineering_rss_xml(
+    site_config: dict[str, str], articles: list[dict[str, Any]], lang: str
+) -> str:
+    """Build RSS XML for the engineering section (technical articles only)."""
+    base_url = site_config["site_url"].rstrip("/")
+    eng_url = f"{base_url}/engineer"
+
+    if lang == "zh":
+        feed_title = f"{site_config['site_name']} - Engineering Articles (Chinese)"
+        feed_link = f"{eng_url}/articles.html?lang=zh"
+        feed_desc = "Chinese technical articles feed"
+        feed_self = f"{eng_url}/rss.xml"
+        feed_lang = "zh-tw"
+    else:
+        feed_title = f"{site_config['site_name']} - Engineering Articles"
+        feed_link = f"{eng_url}/articles.html?lang=en"
+        feed_desc = "Technical engineering articles."
+        feed_self = f"{eng_url}/rss.xml"
+        feed_lang = "en-us"
+
+    lines = [
+        '<?xml version="1.0" encoding="UTF-8"?>',
+        '<rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom">',
+        "  <channel>",
+        f"    <title>{escape(feed_title)}</title>",
+        f"    <link>{escape(feed_link)}</link>",
+        f"    <description>{escape(feed_desc)}</description>",
+        f"    <language>{feed_lang}</language>",
+        f'    <atom:link href="{escape(feed_self)}" rel="self" type="application/rss+xml" />',
+    ]
+
+    for article in articles:
+        link = article["external_url"] or f"{eng_url}/{article['page_url']}"
+        lines.extend(
+            [
+                "    <item>",
+                f"      <title>{escape(str(article['title']))}</title>",
+                f"      <link>{escape(str(link))}</link>",
+                f"      <guid>{escape(str(link))}</guid>",
+                f"      <pubDate>{to_rfc822(str(article['published_at']))}</pubDate>",
+                f"      <description>{escape(str(article.get('excerpt') or ''))}</description>",
+                "    </item>",
+            ]
+        )
+
+    lines.extend(["  </channel>", "</rss>"])
+    return "\n".join(lines) + "\n"
+
+
+def write_engineering_rss(index_payload: dict[str, Any], site_config: dict[str, str]) -> None:
+    """Write a single combined RSS feed for the engineering section."""
+    articles = index_payload["articles"]
+    # Combine all languages into one engineering RSS feed
+    ENG_RSS_PATH.write_text(
+        build_engineering_rss_xml(site_config, articles, "en"), encoding="utf-8"
+    )
+
+
+def write_engineering_outputs(payloads: dict[str, Any], site_config: dict[str, str]) -> None:
+    """Write engineering site output files (technical articles only)."""
+    write_json(ENG_INDEX_PATH, payloads["index"])
+    write_json(ENG_SEARCH_INDEX_PATH, payloads["search"])
+    for (lang, article_id), detail in payloads["details"].items():
+        out_path = ENG_ARTICLES_DATA_DIR / lang / f"{article_id}.json"
+        write_json(out_path, detail)
+    write_engineering_rss(payloads["index"], site_config)
+
+
 def main() -> None:
     if not CONTENT_DIR.exists():
         raise FileNotFoundError(f"Missing content directory: {CONTENT_DIR}")
@@ -1330,6 +1448,8 @@ def main() -> None:
     ensure_output_dirs()
     copy_assets()
     records = load_articles()
+
+    # Main site output: all articles
     payloads = build_payloads(records, base_tags)
     write_outputs(payloads, site_config)
 
@@ -1339,6 +1459,39 @@ def main() -> None:
     print(f"Wrote details dir: {ARTICLES_DATA_DIR.relative_to(ROOT)}")
     print(f"Copied assets: {ASSETS_ARTICLES_DIR.relative_to(ROOT)}")
     print(f"Wrote RSS: {RSS_EN_PATH.relative_to(ROOT)} and {RSS_ZH_PATH.relative_to(ROOT)}")
+
+    # Engineering site output: technical articles only
+    technical_records = [r for r in records if r.meta.get("category") == "technical"]
+    ensure_engineering_output_dirs()
+    copy_engineering_assets(records)
+
+    if technical_records:
+        eng_payloads = build_payloads(technical_records, base_tags)
+        write_engineering_outputs(eng_payloads, site_config)
+        eng_count = len(eng_payloads["index"]["articles"])
+    else:
+        # Write empty outputs when no technical articles exist
+        empty_payloads: dict[str, Any] = {
+            "index": {
+                "generated_at": datetime.now(timezone.utc).isoformat(),
+                "tags": base_tags,
+                "articles": [],
+            },
+            "search": {
+                "generated_at": datetime.now(timezone.utc).isoformat(),
+                "articles": {lang: {} for lang in sorted(SUPPORTED_LANGS)},
+            },
+            "details": {},
+        }
+        write_engineering_outputs(empty_payloads, site_config)
+        eng_count = 0
+
+    print(f"\nEngineering site: {eng_count} technical article entries")
+    print(f"Wrote eng index: {ENG_INDEX_PATH.relative_to(ROOT)}")
+    print(f"Wrote eng search index: {ENG_SEARCH_INDEX_PATH.relative_to(ROOT)}")
+    print(f"Wrote eng details dir: {ENG_ARTICLES_DATA_DIR.relative_to(ROOT)}")
+    print(f"Copied eng assets: {ENG_ASSETS_ARTICLES_DIR.relative_to(ROOT)}")
+    print(f"Wrote eng RSS: {ENG_RSS_PATH.relative_to(ROOT)}")
 
 
 if __name__ == "__main__":

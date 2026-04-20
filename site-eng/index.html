@@ -1,0 +1,544 @@
+<!doctype html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="description"
+        content="Platform Engineer portfolio: AWS, Kubernetes, Terraform, Python, Linux, and networking." />
+    <title>Engineering | Sêng-Gān Ia̍p</title>
+    <script>
+        (() => {
+            try {
+                const preference = localStorage.getItem("theme-preference");
+                if (preference === "light" || preference === "dark") {
+                    document.documentElement.dataset.theme = preference;
+                }
+            } catch (error) { }
+        })();
+    </script>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+        href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;700&family=Noto+Sans+JP:wght@400;500&family=Noto+Serif+JP:wght@500;700&display=swap"
+        rel="stylesheet" />
+    <link rel="stylesheet" href="assets/css/variables.css" />
+    <link rel="stylesheet" href="assets/css/base.css" />
+    <link rel="stylesheet" href="assets/css/layout.css" />
+    <link rel="stylesheet" href="assets/css/components.css" />
+</head>
+
+<body data-page="eng-home">
+    <header class="site-header">
+        <div class="site-shell header-row">
+            <a class="brand" href="index.html">
+                <strong>Sêng-Gān Ia̍p</strong>
+                <span>Platform Engineer</span>
+            </a>
+            <div class="header-actions">
+                <nav class="site-nav" aria-label="Main navigation">
+                    <ul>
+                        <li><a class="nav-link" data-nav="eng-home" href="index.html">Home</a></li>
+                        <li><a class="nav-link" data-nav="eng-projects" href="projects.html">Projects</a></li>
+                        <li><a class="nav-link" data-nav="eng-articles" href="articles.html">Articles</a></li>
+                        <li><a class="nav-link" href="/">Main Site</a></li>
+                    </ul>
+                </nav>
+                <div class="theme-switcher" role="group" aria-label="Color theme">
+                    <span class="theme-switch-label">Theme</span>
+                    <div class="theme-switch-options">
+                        <button class="theme-option" type="button" data-theme-option="system"
+                            aria-pressed="false">Auto</button>
+                        <button class="theme-option" type="button" data-theme-option="light"
+                            aria-pressed="false">Light</button>
+                        <button class="theme-option" type="button" data-theme-option="dark"
+                            aria-pressed="false">Dark</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </header>
+
+    <main class="site-shell">
+        <section class="section hero">
+            <div class="hero-copy" data-reveal>
+                <p class="kicker">Platform Engineer</p>
+                <h2>Building reliable systems on AWS and Kubernetes.</h2>
+                <p class="lead">
+                    Platform Engineer with 4+ years of experience operating distributed systems on AWS and Kubernetes.
+                    Focused on reliability engineering, incident response, production troubleshooting, and root-cause
+                    analysis.
+                </p>
+                <p>
+                    I work on improving availability, reducing operational cost, and strengthening observability in
+                    high-traffic enterprise environments.
+                </p>
+            </div>
+        </section>
+
+        <section class="section" aria-labelledby="eng-snapshot-title">
+            <div class="section-head" data-reveal>
+                <div>
+                    <p class="kicker">Snapshot</p>
+                    <h2 id="eng-snapshot-title">Skills, Certifications, and Contact</h2>
+                </div>
+            </div>
+
+            <article class="card" data-reveal data-delay="80" aria-labelledby="eng-skills-title">
+                <h3 id="eng-skills-title">Technical Skills</h3>
+                <ul class="skill-category-list">
+                    <li><strong>Cloud:</strong> AWS (EC2, EKS, ELB, VPC, Lambda, CloudFront, RDS, Route 53, IAM, S3,
+                        API Gateway)</li>
+                    <li><strong>Containers:</strong> Kubernetes, Docker</li>
+                    <li><strong>Infrastructure as Code:</strong> Terraform, CloudFormation, CDK</li>
+                    <li><strong>Observability:</strong> CloudWatch, Grafana, logging &amp; metrics analysis</li>
+                    <li><strong>Programming/Scripting:</strong> Python, Bash, JavaScript, Node.js</li>
+                </ul>
+            </article>
+
+            <div class="grid-2 snapshot-grid">
+                <article class="card" data-reveal data-delay="140" aria-labelledby="eng-certifications-title">
+                    <h3 id="eng-certifications-title">Certifications</h3>
+                    <ul class="about-certification-list" aria-label="Certifications">
+                        <li>AWS Certified Solutions Architect - Professional (SAP)</li>
+                        <li>Certified Kubernetes Administrator (CKA)</li>
+                        <li>Certified Kubernetes Application Developer (CKAD)</li>
+                    </ul>
+                </article>
+
+                <article class="card" data-reveal data-delay="200" aria-labelledby="eng-contact-title">
+                    <h3 id="eng-contact-title">Contact</h3>
+                    <ul class="about-contact-list" aria-label="Contact links">
+                        <li>
+                            <a class="about-contact-link" href="mailto:iapsinggan@gmail.com">
+                                <span class="about-contact-icon" aria-hidden="true">✉</span>
+                                <span class="about-contact-copy">
+                                    <span class="about-contact-label">Email</span>
+                                    <span class="about-contact-value">iapsinggan@gmail.com</span>
+                                </span>
+                            </a>
+                        </li>
+                        <li>
+                            <a class="about-contact-link" href="https://github.com/FormoSeanIap" target="_blank"
+                                rel="noopener noreferrer">
+                                <span class="about-contact-icon" aria-hidden="true"><svg
+                                        xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24"
+                                        fill="currentColor">
+                                        <path
+                                            d="M12 2C6.48 2 2 6.59 2 12.26c0 4.53 2.87 8.36 6.84 9.72.5.1.68-.22.68-.5 0-.25-.01-1.07-.01-1.94-2.78.62-3.37-1.21-3.37-1.21-.45-1.2-1.11-1.52-1.11-1.52-.91-.64.07-.63.07-.63 1 .07 1.53 1.05 1.53 1.05.89 1.57 2.33 1.12 2.9.86.09-.66.35-1.12.63-1.38-2.22-.26-4.55-1.14-4.55-5.08 0-1.12.39-2.03 1.03-2.74-.1-.26-.45-1.3.1-2.7 0 0 .84-.27 2.75 1.04A9.3 9.3 0 0 1 12 7.64c.85 0 1.7.12 2.5.35 1.9-1.31 2.74-1.04 2.74-1.04.55 1.4.2 2.44.1 2.7.64.71 1.03 1.62 1.03 2.74 0 3.95-2.33 4.81-4.56 5.07.36.32.68.95.68 1.92 0 1.39-.01 2.5-.01 2.85 0 .28.18.61.69.5A10.26 10.26 0 0 0 22 12.26C22 6.59 17.52 2 12 2Z" />
+                                    </svg></span>
+                                <span class="about-contact-copy">
+                                    <span class="about-contact-label">GitHub</span>
+                                    <span class="about-contact-value">github.com/FormoSeanIap</span>
+                                </span>
+                            </a>
+                        </li>
+                        <li>
+                            <a class="about-contact-link" href="https://www.linkedin.com/in/seaniap" target="_blank"
+                                rel="noopener noreferrer">
+                                <span class="about-contact-icon" aria-hidden="true"><svg
+                                        xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24"
+                                        fill="currentColor">
+                                        <path
+                                            d="M6.94 8.5a1.74 1.74 0 1 1 0-3.48 1.74 1.74 0 0 1 0 3.48ZM5.44 9.8h3V19h-3V9.8Zm4.68 0H13v1.26h.04c.4-.76 1.38-1.56 2.85-1.56 3.05 0 3.61 2.03 3.61 4.66V19h-3v-4.24c0-1.01-.02-2.3-1.38-2.3-1.38 0-1.6 1.1-1.6 2.23V19h-3V9.8Z" />
+                                    </svg></span>
+                                <span class="about-contact-copy">
+                                    <span class="about-contact-label">LinkedIn</span>
+                                    <span class="about-contact-value">linkedin.com/in/seaniap</span>
+                                </span>
+                            </a>
+                        </li>
+                    </ul>
+                </article>
+            </div>
+        </section>
+
+        <section class="section" aria-labelledby="eng-experience-title">
+            <div class="section-head" data-reveal>
+                <h2 id="eng-experience-title">Professional Experience</h2>
+            </div>
+            <ul class="timeline">
+                <li class="card" data-reveal data-delay="80">
+                    <p class="meta">Jun 2024 - Present</p>
+                    <h3>Amazon Web Services - Cloud Support Engineer</h3>
+                    <p>
+                        Lead production troubleshooting and root-cause analysis for enterprise-scale AWS workloads
+                        (EC2, EKS, DNS, networking, load balancing), leveraging CloudWatch metrics, Grafana dashboards,
+                        VPC Flow Logs, and Python-based diagnostics to restore reliability.
+                    </p>
+
+                    <div class="experience-subsection">
+                        <h4>Technical customer support delivery</h4>
+                        <ul>
+                            <li>Provide technical guidance to customers through email, phone, and live chat,
+                                translating AWS-service internals into actionable steps for on-call engineers and
+                                platform owners.</li>
+                            <li>Diagnose and resolve complex technical issues by analysing metrics, logs, packet
+                                captures, and system behaviours to identify root causes and implement effective
+                                solutions.</li>
+                            <li>Maintain a reusable Terraform toolkit for common customer environments, reducing case
+                                resolution time by 10%-30% by reproducing customer setups quickly instead of rebuilding
+                                from scratch every case.</li>
+                        </ul>
+                    </div>
+
+                    <div class="experience-subsection">
+                        <h4>FIX protocol disconnections on Network Load Balancers</h4>
+                        <p>
+                            Worked on a long-running reliability issue where customers experienced intermittent
+                            disconnections on long-lived FIX protocol connections running through a VPC PrivateLink
+                            endpoint. The case was unusually hard to reason about because it affected multiple
+                            customers in different time zones, produced no clear application errors, and was not
+                            consistently reproducible on demand.
+                        </p>
+                        <ul>
+                            <li>Collaborated with the affected customers to collect VPC Flow Logs alongside packet
+                                captures from both the client and server sides, so the signal set was wide enough to
+                                rule out common explanations before proposing a root cause.</li>
+                            <li>Kept a daily written summary of the findings throughout the investigation so that
+                                everyone involved (across time zones and teams) was aligned on what had been ruled out
+                                and what was still open.</li>
+                            <li>Identified a previously unknown issue inside the service and worked with the owning
+                                service team to develop and deploy a fix, improving reliability for the affected
+                                customers.</li>
+                            <li>Invited to present the case at a regional all-hands so other engineers could recognise
+                                the same pattern faster in the future.</li>
+                        </ul>
+                    </div>
+
+                    <div class="experience-subsection">
+                        <h4>ALB operational issue identification and product-reliability improvement</h4>
+                        <ul>
+                            <li>Identified a recurring ALB DNS failover issue by analysing internal system logs and
+                                reproducing the behaviour with a fellow engineer, then delivered a temporary mitigation
+                                plan to the customer.</li>
+                            <li>Captured and analysed packets in Wireshark to clarify the ALB connection mechanism,
+                                then shared improvement suggestions with the internal development team to inform a
+                                longer-term product fix.</li>
+                        </ul>
+                    </div>
+
+                    <div class="experience-subsection">
+                        <h4>Customer IP blockage investigation and escalation</h4>
+                        <ul>
+                            <li>Investigated customer reports of being blocked from AWS web properties by correlating
+                                customer-provided logs with internal telemetry and confirming the IPs had been blocked
+                                due to cyberattack traffic from shared proxies.</li>
+                            <li>Escalated beyond standard support by collaborating with my manager and the sales team
+                                to engage the internal security team, ensuring the resolution path went through the
+                                right channel rather than bouncing between queues.</li>
+                        </ul>
+                    </div>
+
+                    <div class="experience-subsection">
+                        <h4>EKS cross-cluster autoscaling misconfiguration</h4>
+                        <p>
+                            A customer reported that when they terminated a node in Cluster B, a new node would
+                            unexpectedly launch in Cluster A. The obvious next step would have been to dig into the
+                            Cluster Autoscaler or Karpenter logs, but those were not available on the affected side, so
+                            I had to reason from adjacent signals instead.
+                        </p>
+                        <ul>
+                            <li>Checked CloudTrail logs for Auto Scaling events and confirmed the scale-out action was
+                                triggered by the Cluster Autoscaler rather than Karpenter, narrowing the search before
+                                inspecting any configuration.</li>
+                            <li>Inspected the IAM role used by the Cluster Autoscaler and noticed its OIDC trust
+                                relationship pointed at Cluster A, which immediately suggested a cross-cluster
+                                misconfiguration.</li>
+                            <li>Hypothesised that the customer had copied the autoscaler configuration from Cluster A
+                                to Cluster B without updating the IAM role and OIDC trust, so Cluster B's autoscaler
+                                was authorised to act on Cluster A's resources. Confirmed the root cause once we
+                                collected Cluster B's autoscaler configuration file.</li>
+                            <li>The cross-cluster scaling behaviour stopped once the customer scoped each autoscaler
+                                role to its own cluster. The case made a clean example of diagnosing an EKS issue from
+                                infrastructure and security-configuration signals rather than application logs.</li>
+                        </ul>
+                    </div>
+
+                    <div class="experience-subsection">
+                        <h4>Terraform-based lab for customer-environment reproduction</h4>
+                        <p>
+                            Many networking and Kubernetes cases involve complex customer environments that cannot be
+                            fully observed from logs or configuration snippets alone. Troubleshooting directly from
+                            what customers can share is often slow, so I invested in a reusable reproduction
+                            environment.
+                        </p>
+                        <ul>
+                            <li>Built modular Terraform configurations that can quickly stand up typical customer
+                                architectures: VPCs, EKS clusters, load balancers, and common networking pieces such
+                                as NAT gateways and security-group layouts.</li>
+                            <li>When a new case arrives, recreate a similar environment in my own AWS account and
+                                test hypotheses directly instead of bouncing questions back to the customer.</li>
+                            <li>Reduced my average case resolution time by around 10% by turning "ask the customer to
+                                re-run something" into "reproduce it locally first."</li>
+                        </ul>
+                    </div>
+
+                    <div class="experience-subsection">
+                        <h4>Security and compliance automation</h4>
+                        <ul>
+                            <li>Automated ISO 27001 security notification workflows using GuardDuty and EventBridge,
+                                so customers could detect and react to suspicious activity without relying on periodic
+                                manual reviews.</li>
+                            <li>Wired the notifications into existing customer alerting paths so the new signal
+                                improved their compliance posture without adding a new surface to maintain.</li>
+                        </ul>
+                    </div>
+                </li>
+                <li class="card" data-reveal data-delay="140">
+                    <p class="meta">Aug 2022 - Jun 2024</p>
+                    <h3>KKCompany - Site Reliability Engineer</h3>
+                    <p>
+                        Operated distributed production systems on AWS (EC2, ECS, EKS) supporting 140k DAU / 900k MAU;
+                        participated in 24/7 on-call rotation via PagerDuty and resolved critical production incidents
+                        to maintain 99.9% SLA of service reliability and availability.
+                    </p>
+
+                    <div class="experience-subsection">
+                        <h4>Service availability during high-traffic baseball events</h4>
+                        <ul>
+                            <li>Identified database scaling speed as the underlying bottleneck behind service dips
+                                during traffic surges rather than treating the symptoms one incident at a time.</li>
+                            <li>Calculated required server resources and drafted pre-warm plans for upcoming games
+                                based on expected user load and known service capacity.</li>
+                            <li>Improved availability and resource efficiency by transitioning from Amazon RDS to
+                                Amazon ElastiCache for the hot read path, working with the back-end engineers on the
+                                change-over.</li>
+                            <li>Together, the pre-warm strategy and the DB scaling improvements lifted service
+                                availability and reduced operational cost by around 30% across the event window.</li>
+                        </ul>
+                    </div>
+
+                    <div class="experience-subsection">
+                        <h4>CDN migration evaluation and execution</h4>
+                        <ul>
+                            <li>Generated CDN reports and reviewed them with the Product Manager to align the
+                                migration with customer-facing requirements before any infrastructure moved.</li>
+                            <li>Collaborated with the new CDN provider's engineer to replicate routing rules from the
+                                old provider after the initial routing assessment, keeping request behaviour stable
+                                through the switch.</li>
+                            <li>Drafted the migration plan with effort estimates in consultation with the Product
+                                Manager so the schedule reflected engineering reality, not wishful thinking.</li>
+                            <li>Executed a zero-downtime CDN switch on ~11 TB/day of production traffic, and achieved
+                                roughly 10% cost optimisation at the new provider thanks to the re-assessed routing
+                                rules.</li>
+                        </ul>
+                    </div>
+
+                    <div class="experience-subsection">
+                        <h4>Automation-tool maintainability improvements</h4>
+                        <ul>
+                            <li>Simplified the maintenance-mode infrastructure by replacing a Route 53 DNS switch and
+                                ALB-rule mechanism with a single WAF-based traffic-control design, removing a class of
+                                DNS-propagation surprises from the runbook and cutting maintenance-mode execution time
+                                by about 60% while standardising the usage pattern across teams.</li>
+                            <li>Revamped the automation tool's Python script so new SREs could read it, extend it, and
+                                trust it under incident pressure.</li>
+                            <li>Migrated the fleet from AWS Classic Load Balancer to Application Load Balancer,
+                                unlocking target-group health checks, richer routing rules, and modern observability.
+                            </li>
+                        </ul>
+                    </div>
+
+                    <div class="experience-subsection">
+                        <h4>CI/CD modernisation from CloudFormation to Terraform</h4>
+                        <p>
+                            Our CI/CD pipelines were running inside containers hosted in a private Docker registry
+                            that was no longer actively maintained. The images were also owned and published by an
+                            engineer who had already left the company, which made the pipeline runtime both
+                            unmaintainable and a long-term security risk.
+                        </p>
+                        <ul>
+                            <li>Rebuilt the CI/CD container runtime on Amazon ECR under company ownership so the
+                                pipeline images were versioned, maintainable, and fully controlled by the
+                                organisation.</li>
+                            <li>Replaced the existing CloudFormation-based deployment process with a Terraform-based
+                                one as the company was gradually migrating off CloudFormation, rather than letting
+                                SRE-owned repos drift further from the rest of the stack.</li>
+                            <li>Abstracted the deployment logic that most projects had duplicated into a shared
+                                Terraform module and reused it across SRE-owned repositories, which eliminated the
+                                copy-paste YAML, made future changes consistent, and reduced the maintenance cost of
+                                each pipeline.</li>
+                        </ul>
+                    </div>
+
+                    <div class="experience-subsection">
+                        <h4>Alarm architecture redesign using CloudWatch composite alarms</h4>
+                        <p>
+                            On-call engineers were being paged by P0 alerts that did not actually represent real
+                            system issues. One example was an alert that triggered whenever a single database
+                            instance reached 90% CPU — that condition usually came from uneven load and did not affect
+                            availability or user experience, but it still required a five-minute response.
+                        </p>
+                        <ul>
+                            <li>Ran a design discussion within the SRE team and agreed on two rules for P0 alerts:
+                                they should reflect real user or system impact, and they should be actionable so the
+                                on-call engineer knows exactly what to do when paged.</li>
+                            <li>Rebuilt the database CPU alert using CloudWatch composite alarms so it only triggers
+                                when all database instances exceed the threshold at the same time, rather than firing
+                                on any single instance.</li>
+                            <li>Reduced alert triggers by around 30% across the service and, more importantly, made
+                                paged alerts trustworthy again, which improved on-call experience and operational
+                                efficiency.</li>
+                        </ul>
+                    </div>
+
+                    <div class="experience-subsection">
+                        <h4>ISO 27001 compliance support</h4>
+                        <ul>
+                            <li>Built monitoring systems to detect abnormal logins across key systems, including the
+                                databases and the CMS, so compliance evidence came from real signals rather than
+                                periodic manual reviews.</li>
+                            <li>Helped devise a streamlined CloudTrail log-monitoring plan focused on the events that
+                                actually mattered for the audit scope, not the full log firehose.</li>
+                        </ul>
+                    </div>
+
+                    <div class="experience-subsection">
+                        <h4>P0 incident resolution</h4>
+                        <ul>
+                            <li>Helped identify a customer-side misconfiguration as the root cause of a DNS routing
+                                issue during a P0, instead of letting the initial assumption ("it's our CDN") drive the
+                                remediation.</li>
+                            <li>Collaborated with the Product Manager to expedite the resolution path across teams and
+                                customer communication.</li>
+                        </ul>
+                    </div>
+                </li>
+                <li class="card" data-reveal data-delay="200">
+                    <p class="meta">Feb 2022 - Jun 2022</p>
+                    <h3>AppWorks School - Back-End Trainee</h3>
+                    <p>
+                        Built a full-stack API documentation platform from scratch using React, Node.js, MongoDB,
+                        Docker, and AWS within five weeks.
+                    </p>
+
+                    <div class="experience-subsection">
+                        <h4>End-to-end product delivery on a compressed timeline</h4>
+                        <ul>
+                            <li>Shipped the API documentation platform (web, server, and database) in five weeks,
+                                demonstrating quick, self-taught, problem-solving delivery under schedule pressure.</li>
+                            <li>Teamed up with Front-End and Android developers to build a backstage and coupon
+                                management system in a single week, integrating across three layers without a pre-made
+                                contract.</li>
+                            <li>Built a URL-shortener system in the system-design workshop across three days, which
+                                drove the lesson on predicting web traffic, choosing cache policies, and splitting
+                                read/write database design for scale.</li>
+                        </ul>
+                    </div>
+
+                    <div class="experience-subsection">
+                        <h4>Performance and reliability research</h4>
+                        <ul>
+                            <li>Researched and ran experiments on Nginx as an HTTP load balancer over two days,
+                                converting "I read about it once" into something I could explain and defend.</li>
+                            <li>Explored cache penetration, cache stampede, and cache avalanche mitigations with Redis
+                                locks and Redis Cluster across a weekend, producing concrete examples rather than
+                                theory.</li>
+                            <li>Stood out in the Trouble-Shooting Lab on networking problems, where the core skill was
+                                matching symptoms to the relevant layer (DNS, TCP, HTTP) fast.</li>
+                        </ul>
+                    </div>
+
+                    <div class="experience-subsection">
+                        <h4>Technical writing and peer support</h4>
+                        <ul>
+                            <li>Published two technical articles on Medium during the programme; both passed 100 claps
+                                and were referenced by fellow team members, which is where I learned that clear writing
+                                compounds.</li>
+                            <li>Shared English-writing tips for resumes with teammates when asked, which was
+                                appreciated by the cohort and reinforced the habit of treating help-asks as a two-way
+                                exchange.</li>
+                        </ul>
+                    </div>
+                </li>
+                <li class="card" data-reveal data-delay="260">
+                    <p class="meta">Jul 2021 - Dec 2021</p>
+                    <h3>DIGI+ Talent Accelerator &amp; Jumpstart Program - Software Engineer Intern</h3>
+                    <p>
+                        Designed and developed an end-to-end interactive game using Unity (C#) with Arduino hardware
+                        devices and MySQL backend services.
+                    </p>
+                </li>
+            </ul>
+        </section>
+
+        <section class="section" aria-labelledby="eng-talks-title">
+            <div class="section-head" data-reveal>
+                <h2 id="eng-talks-title">Talks &amp; Awards</h2>
+            </div>
+            <ul class="timeline">
+                <li class="card" data-reveal data-delay="80">
+                    <p class="meta">Aug 2024</p>
+                    <h3>Invited Talk on High-Traffic Reliability Lessons</h3>
+                    <p>
+                        Invited by iThome to record a 30-minute webinar, "「系統被大流量衝垮了怎麼辦？」—用30分鐘濃縮1年的高流量維運經驗談,"
+                        sharing roughly a year of lessons from handling a high-traffic incident through observation,
+                        monitoring, architecture adjustments, and operational response.
+                    </p>
+                    <span class="milestone-links">
+                        <a class="button-link" href="https://itplus.ithome.com.tw/webinar-page/222" target="_blank"
+                            rel="noopener noreferrer">Watch Talk</a>
+                    </span>
+                </li>
+                <li class="card" data-reveal data-delay="140">
+                    <p class="meta">2023</p>
+                    <h3>IT Ironman DevOps Top Honour</h3>
+                    <p>
+                        Published the series "A Glimpse into the Life of a Novice SRE"
+                        (一窺SRE初心者的生活：讓警報為您的人生畫下如交響樂一般的新篇章). Received IT Ironman DevOps Top Honour (IT 鐵人賽
+                        DevOps 組冠軍), and extended the work into a book adaptation.
+                    </p>
+                    <span class="milestone-links">
+                        <a class="button-link" href="https://ithelp.ithome.com.tw/users/20162472/ironman/6398"
+                            target="_blank" rel="noopener noreferrer">Read Series</a>
+                        <a class="button-link" href="https://www.drmaster.com.tw/bookinfo.asp?BookID=MP22429"
+                            target="_blank" rel="noopener noreferrer">View Book</a>
+                    </span>
+                </li>
+            </ul>
+        </section>
+
+        <section class="section" aria-labelledby="eng-education-title">
+            <div class="section-head" data-reveal>
+                <h2 id="eng-education-title">Education</h2>
+            </div>
+            <ul class="timeline">
+                <li class="card" data-reveal data-delay="80">
+                    <p class="meta">Sep 2019 - Jan 2022</p>
+                    <h3>National Taiwan University</h3>
+                    <p>M.A, Philosophy</p>
+                </li>
+                <li class="card" data-reveal data-delay="140">
+                    <p class="meta">Sep 2015 - Jan 2019</p>
+                    <h3>National Taiwan Normal University</h3>
+                    <p>BEd, Civic Education and Leadership</p>
+                </li>
+            </ul>
+        </section>
+
+        <section class="section" aria-labelledby="eng-languages-title">
+            <div class="section-head" data-reveal>
+                <h2 id="eng-languages-title">Languages</h2>
+            </div>
+            <article class="card" data-reveal data-delay="80">
+                <ul class="skill-category-list">
+                    <li><strong>Taiwanese:</strong> Conversational</li>
+                    <li><strong>Chinese (Mandarin):</strong> Native</li>
+                    <li><strong>English:</strong> Professional (TOEIC 910)</li>
+                    <li><strong>Japanese:</strong> Intermediate (JLPT N2)</li>
+                </ul>
+            </article>
+        </section>
+    </main>
+
+    <footer class="site-shell footer">
+        <p>Copyright <span data-year></span> Sêng-Gān Ia̍p</p>
+        <p>Engineering portfolio in active evolution.</p>
+    </footer>
+
+    <script src="assets/js/main.js"></script>
+    <script src="assets/js/analytics.js"></script>
+</body>
+
+</html>

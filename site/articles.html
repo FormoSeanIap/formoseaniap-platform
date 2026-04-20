@@ -1,131 +1,130 @@
 <!doctype html>
 <html lang="en">
-  <head>
-    <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <meta name="description" content="Technical and personal articles." />
-    <title>Portfolio | Articles</title>
-    <script>
-      (() => {
-        try {
-          const preference = localStorage.getItem("theme-preference");
-          if (preference === "light" || preference === "dark") {
-            document.documentElement.dataset.theme = preference;
-          }
-        } catch (error) {}
-      })();
-    </script>
-    <link rel="preconnect" href="https://fonts.googleapis.com" />
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-    <link
-      href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;700&family=Noto+Sans+JP:wght@400;500&family=Noto+Serif+JP:wght@500;700&display=swap"
-      rel="stylesheet"
-    />
-    <link rel="stylesheet" href="assets/css/variables.css" />
-    <link rel="stylesheet" href="assets/css/base.css" />
-    <link rel="stylesheet" href="assets/css/layout.css" />
-    <link rel="stylesheet" href="assets/css/components.css" />
-    <link rel="alternate" type="application/rss+xml" title="Articles RSS (EN)" href="rss.xml" />
-    <link rel="alternate" type="application/rss+xml" title="Articles RSS (ZH)" href="zh/rss.xml" />
-  </head>
-  <body data-page="articles">
-    <header class="site-header">
-      <div class="site-shell header-row">
-        <a class="brand" href="index.html">
-          <strong>Sêng-Gān Ia̍p</strong>
-          <span>Platform Engineer / Writer / Creator</span>
-        </a>
-        <div class="header-actions">
-          <nav class="site-nav" aria-label="Main navigation">
-            <ul>
-              <li><a class="nav-link" data-nav="home" href="index.html">Home</a></li>
-              <li><a class="nav-link" data-nav="projects" href="projects.html">Projects</a></li>
-              <li><a class="nav-link" data-nav="podcasts" href="podcasts.html">Podcasts</a></li>
-              <li><a class="nav-link" data-nav="articles" href="articles.html">Articles</a></li>
-              <li><a class="nav-link" data-nav="about" href="about.html">About</a></li>
-            </ul>
-          </nav>
-          <div class="theme-switcher" role="group" aria-label="Color theme">
-            <span class="theme-switch-label">Theme</span>
-            <div class="theme-switch-options">
-              <button class="theme-option" type="button" data-theme-option="system" aria-pressed="false">Auto</button>
-              <button class="theme-option" type="button" data-theme-option="light" aria-pressed="false">Light</button>
-              <button class="theme-option" type="button" data-theme-option="dark" aria-pressed="false">Dark</button>
-            </div>
+
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="description" content="Technical and personal articles." />
+  <title>Portfolio | Articles</title>
+  <script>
+    (() => {
+      try {
+        const preference = localStorage.getItem("theme-preference");
+        if (preference === "light" || preference === "dark") {
+          document.documentElement.dataset.theme = preference;
+        }
+      } catch (error) { }
+    })();
+  </script>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link
+    href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;700&family=Noto+Sans+JP:wght@400;500&family=Noto+Serif+JP:wght@500;700&display=swap"
+    rel="stylesheet" />
+  <link rel="stylesheet" href="assets/css/variables.css" />
+  <link rel="stylesheet" href="assets/css/base.css" />
+  <link rel="stylesheet" href="assets/css/layout.css" />
+  <link rel="stylesheet" href="assets/css/components.css" />
+  <link rel="alternate" type="application/rss+xml" title="Articles RSS (EN)" href="rss.xml" />
+  <link rel="alternate" type="application/rss+xml" title="Articles RSS (ZH)" href="zh/rss.xml" />
+</head>
+
+<body data-page="articles">
+  <header class="site-header">
+    <div class="site-shell header-row">
+      <a class="brand" href="index.html">
+        <strong>Sêng-Gān Ia̍p</strong>
+        <span>Platform Engineer / Writer / Creator</span>
+      </a>
+      <div class="header-actions">
+        <nav class="site-nav" aria-label="Main navigation">
+          <ul>
+            <li><a class="nav-link" data-nav="home" href="index.html">Home</a></li>
+            <li><a class="nav-link" data-nav="projects" href="projects.html">Projects</a></li>
+            <li><a class="nav-link" data-nav="podcasts" href="podcasts.html">Podcasts</a></li>
+            <li><a class="nav-link" data-nav="articles" href="articles.html">Articles</a></li>
+            <li><a class="nav-link" data-nav="about" href="about.html">About</a></li>
+            <li><a class="nav-link" href="/engineer/">Engineering</a></li>
+          </ul>
+        </nav>
+        <div class="theme-switcher" role="group" aria-label="Color theme">
+          <span class="theme-switch-label">Theme</span>
+          <div class="theme-switch-options">
+            <button class="theme-option" type="button" data-theme-option="system" aria-pressed="false">Auto</button>
+            <button class="theme-option" type="button" data-theme-option="light" aria-pressed="false">Light</button>
+            <button class="theme-option" type="button" data-theme-option="dark" aria-pressed="false">Dark</button>
           </div>
         </div>
       </div>
-    </header>
+    </div>
+  </header>
 
-    <main class="site-shell">
-      <section class="section">
-        <div class="hero-copy" data-reveal>
-          <p class="kicker">Articles</p>
-          <h1>Writing on systems, craft, and clear thinking.</h1>
-          <p class="lead">
-            A mix of technical notes and reflective writing about building better software and a better engineering practice.
-          </p>
-          <p class="meta">
-            Source content is authored in Markdown and built into JSON data for this page.
-          </p>
-        </div>
-      </section>
+  <main class="site-shell">
+    <section class="section">
+      <div class="hero-copy" data-reveal>
+        <p class="kicker">Articles</p>
+        <h1>Writing on systems, craft, and clear thinking.</h1>
+        <p class="lead">
+          A mix of technical notes and reflective writing about building better software and a better engineering
+          practice.
+        </p>
+        <p class="meta">
+          Source content is authored in Markdown and built into JSON data for this page.
+        </p>
+      </div>
+    </section>
 
-      <section class="section" id="series-context-section" aria-label="Series context" hidden>
-        <div class="card series-context-card" data-reveal data-delay="20">
-          <div id="series-context-cover" hidden></div>
-          <p class="kicker" id="series-context-kicker">Series</p>
-          <h2 id="series-context-title">Series</h2>
-          <p class="meta" id="series-context-meta"></p>
-          <div class="article-filter-row" id="series-context-tags" hidden></div>
-          <div class="article-filter-row" id="series-context-actions"></div>
-        </div>
-      </section>
+    <section class="section" id="series-context-section" aria-label="Series context" hidden>
+      <div class="card series-context-card" data-reveal data-delay="20">
+        <div id="series-context-cover" hidden></div>
+        <p class="kicker" id="series-context-kicker">Series</p>
+        <h2 id="series-context-title">Series</h2>
+        <p class="meta" id="series-context-meta"></p>
+        <div class="article-filter-row" id="series-context-tags" hidden></div>
+        <div class="article-filter-row" id="series-context-actions"></div>
+      </div>
+    </section>
 
-      <section class="section" aria-label="Article filters">
-        <div class="card" data-reveal data-delay="40" data-article-filters>
-          <form class="article-search" id="article-search" role="search">
-            <label class="visually-hidden" for="article-search-input">Search articles</label>
-            <div class="article-search-bar">
-              <input
-                class="article-search-input"
-                id="article-search-input"
-                type="search"
-                name="q"
-                placeholder="Search articles"
-                autocomplete="off"
-              />
-              <div class="article-search-mode-group" role="group" aria-label="Search mode">
-                <button class="tag filter-chip filter-chip-button" type="button" data-search-mode="title">Title</button>
-                <button class="tag filter-chip filter-chip-button" type="button" data-search-mode="series">Series</button>
-                <button class="tag filter-chip filter-chip-button" type="button" data-search-mode="content">Content</button>
-              </div>
+    <section class="section" aria-label="Article filters">
+      <div class="card" data-reveal data-delay="40" data-article-filters>
+        <form class="article-search" id="article-search" role="search">
+          <label class="visually-hidden" for="article-search-input">Search articles</label>
+          <div class="article-search-bar">
+            <input class="article-search-input" id="article-search-input" type="search" name="q"
+              placeholder="Search articles" autocomplete="off" />
+            <div class="article-search-mode-group" role="group" aria-label="Search mode">
+              <button class="tag filter-chip filter-chip-button" type="button" data-search-mode="title">Title</button>
+              <button class="tag filter-chip filter-chip-button" type="button" data-search-mode="series">Series</button>
+              <button class="tag filter-chip filter-chip-button" type="button"
+                data-search-mode="content">Content</button>
             </div>
-            <p class="meta article-search-status" id="article-search-status"></p>
-          </form>
-          <div class="article-filter-row" id="language-filters"></div>
-          <div class="article-filter-row" id="category-filters"></div>
-          <div class="article-filter-row" id="subcategory-filters"></div>
-          <div class="article-filter-row" id="tag-filters"></div>
-          <p class="meta" id="active-filter-summary"></p>
-        </div>
-      </section>
+          </div>
+          <p class="meta article-search-status" id="article-search-status"></p>
+        </form>
+        <div class="article-filter-row" id="language-filters"></div>
+        <div class="article-filter-row" id="category-filters"></div>
+        <div class="article-filter-row" id="subcategory-filters"></div>
+        <div class="article-filter-row" id="tag-filters"></div>
+        <p class="meta" id="active-filter-summary"></p>
+      </div>
+    </section>
 
-      <section class="section" aria-label="Article list">
-        <div class="timeline article-grid" id="article-list" data-articles-list></div>
-        <div class="progressive-list-controls" data-articles-list-controls hidden></div>
-        <p class="meta article-empty" id="article-empty" hidden>No articles match the current filters.</p>
-      </section>
-    </main>
+    <section class="section" aria-label="Article list">
+      <div class="timeline article-grid" id="article-list" data-articles-list></div>
+      <div class="progressive-list-controls" data-articles-list-controls hidden></div>
+      <p class="meta article-empty" id="article-empty" hidden>No articles match the current filters.</p>
+    </section>
+  </main>
 
-    <footer class="site-shell footer">
-      <p>Copyright <span data-year></span> Sêng-Gān Ia̍p</p>
-      <p>New writing will be published incrementally.</p>
-    </footer>
+  <footer class="site-shell footer">
+    <p>Copyright <span data-year></span> Sêng-Gān Ia̍p</p>
+    <p>New writing will be published incrementally.</p>
+  </footer>
 
-    <script src="assets/js/main.js"></script>
-    <script src="assets/js/progressive-list.js"></script>
-    <script src="assets/js/articles.js"></script>
-    <script src="assets/js/analytics.js"></script>
-  </body>
+  <script src="assets/js/main.js"></script>
+  <script src="assets/js/progressive-list.js"></script>
+  <script src="assets/js/articles.js"></script>
+  <script src="assets/js/analytics.js"></script>
+</body>
+
 </html>

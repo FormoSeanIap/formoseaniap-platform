@@ -12,7 +12,10 @@ from pathlib import Path
 DEFAULT_HOST = "127.0.0.1"
 DEFAULT_PORT = 5500
 DEFAULT_PORT_SEARCH_LIMIT = 20
-SITE_DIR = Path(__file__).resolve().parent.parent / "site"
+ROOT_DIR = Path(__file__).resolve().parent.parent
+SITE_DIR = ROOT_DIR / "site"
+SITE_ENG_DIR = ROOT_DIR / "site-eng"
+ENGINEER_PREFIX = "/engineer"
 NO_STORE_PATHS = {
     "/data/analytics.config.json",
 }
@@ -23,6 +26,22 @@ def build_json_body(payload: dict[str, object]) -> bytes:
 
 
 class SitePreviewHandler(SimpleHTTPRequestHandler):
+    eng_directory: str = ""
+
+    def translate_path(self, path: str) -> str:
+        """Route /engineer/* requests to site-eng/, everything else to site/."""
+        clean = path.split("?", 1)[0].split("#", 1)[0]
+        if clean == ENGINEER_PREFIX or clean.startswith(ENGINEER_PREFIX + "/"):
+            # Strip the /engineer prefix and serve from site-eng/
+            stripped = clean[len(ENGINEER_PREFIX):] or "/"
+            # Temporarily swap directory to serve from site-eng/
+            original_directory = self.directory
+            self.directory = self.eng_directory
+            result = super().translate_path(stripped)
+            self.directory = original_directory
+            return result
+        return super().translate_path(path)
+
     def end_headers(self) -> None:
         request_path = self.path.split("?", 1)[0]
         if request_path in NO_STORE_PATHS or request_path.startswith("/analytics-api/"):
@@ -112,6 +131,8 @@ def create_server(
 def main() -> None:
     args = parse_args()
     site_dir = Path(args.site_dir).resolve()
+    site_eng_dir = SITE_ENG_DIR.resolve()
+    SitePreviewHandler.eng_directory = str(site_eng_dir)
     handler = partial(SitePreviewHandler, directory=str(site_dir))
     server, active_port = create_server(
         host=args.host,
@@ -125,6 +146,8 @@ def main() -> None:
         )
     print(f"Site preview listening on http://{args.host}:{active_port}")
     print(f"Static root: {site_dir}")
+    print(f"Engineering root: {site_eng_dir}")
+    print(f"Engineering section: http://{args.host}:{active_port}/engineer/")
     print(f"Analytics admin: http://{args.host}:{active_port}/admin/analytics.html")
     try:
         server.serve_forever()

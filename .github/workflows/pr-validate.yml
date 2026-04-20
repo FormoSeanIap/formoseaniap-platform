@@ -127,7 +127,7 @@ jobs:
         uses: actions/download-artifact@v8
         with:
           name: site-preview-${{ github.event.pull_request.number }}
-          path: preview-site
+          path: preview-artifact
 
       - name: Configure AWS credentials from GitHub OIDC
         uses: aws-actions/configure-aws-credentials@v6
@@ -137,7 +137,9 @@ jobs:
           role-session-name: gha-preview-${{ github.event.pull_request.number }}
 
       - name: Sync preview site to S3
-        run: aws s3 sync preview-site/ "s3://${{ vars.PREVIEW_S3_BUCKET }}/pr-${{ github.event.pull_request.number }}/" --delete
+        run: |
+          aws s3 sync preview-artifact/site/ "s3://${{ vars.PREVIEW_S3_BUCKET }}/pr-${{ github.event.pull_request.number }}/" --delete
+          aws s3 sync preview-artifact/site-eng/ "s3://${{ vars.PREVIEW_S3_BUCKET }}/pr-${{ github.event.pull_request.number }}/engineer/" --delete
 
       - name: Invalidate preview CloudFront cache
         if: ${{ vars.PREVIEW_CLOUDFRONT_DISTRIBUTION_ID != '' }}

@@ -1,5 +1,5 @@
 (() => {
-  const PAGE_KEYS = new Set(["about", "articles", "artworks", "home", "podcasts", "projects"]);
+  const PAGE_KEYS = new Set(["eng-home", "eng-articles", "eng-projects"]);
   const VISITOR_STORAGE_KEY = "analytics-visitor-id";
   const sentKeys = new Set();
 
@@ -62,7 +62,7 @@
     sendPayload({
       ...payload,
       visitor_id: getVisitorId(),
-      domain: "main"
+      domain: "engineering"
     });
   };
 

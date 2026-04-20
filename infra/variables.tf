@@ -76,3 +76,9 @@ variable "site_bucket_versioning_enabled" {
   description = "Whether to enable versioning on the private S3 site bucket."
   type        = bool
 }
+
+variable "engineering_subdomain" {
+  default     = "engineer"
+  description = "Subdomain for the engineering portfolio site."
+  type        = string
+}
