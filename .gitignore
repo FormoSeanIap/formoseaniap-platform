@@ -21,6 +21,10 @@ site-eng/data/articles.search.json
 site-eng/rss.xml
 site-eng/assets/articles/
 
+# Generated at deploy time from Terraform outputs; never committed.
+site/data/analytics.config.json
+site-eng/data/analytics.config.json
+
 # Logs
 *.log
 npm-debug.log*
