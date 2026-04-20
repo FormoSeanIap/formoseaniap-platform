@@ -58,7 +58,7 @@ resource "aws_cloudfront_origin_access_control" "engineering_site" {
 
 resource "aws_cloudfront_function" "engineer_path_rewrite" {
   code    = file("${path.module}/cloudfront/engineer_path_rewrite.js")
-  comment = "Strip /engineer prefix from viewer requests before forwarding to the engineering S3 origin."
+  comment = "Resolve directory-style /engineer/* requests to the matching index.html object in the engineering S3 origin."
   name    = "${local.name_prefix}-engineer-path-rewrite"
   publish = true
   runtime = "cloudfront-js-2.0"
