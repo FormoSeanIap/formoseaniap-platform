@@ -37,7 +37,9 @@
         "s3:CreateBucket",
         "s3:DeleteBucket",
         "s3:GetBucketLocation",
-        "s3:ListAllMyBuckets"
+        "s3:ListAllMyBuckets",
+        "s3:PutBucketTagging",
+        "s3:TagResource"
       ],
       "Resource": "*"
     },
