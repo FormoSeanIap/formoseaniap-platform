@@ -124,6 +124,7 @@ The podcast feeds are owned by a third party, so the browser cannot rely on upst
 | Engineering content path | CloudFront routes `/engineer/*` to a separate S3 origin. Object keys in that bucket keep the `engineer/` prefix so the CloudFront cache key for engineering pages stays distinct from main-site pages that share a filename. |
 | Engineering S3 bucket | A separate private S3 bucket holds the engineering section content, accessed through its own Origin Access Control on the same CloudFront distribution. |
 | Cost control | The stack uses AWS-managed CloudFront cache policies and keeps flat-rate CloudFront plan handling as a deliberate console-managed step. |
+| Shared asset caching | `scripts/fingerprint_assets.py` hashes every shared CSS/JS file under `site/assets/{css,js}/`, emits a content-addressed copy (`components.<hash>.css`), rewrites every HTML reference in both trees to point at the hashed name, and writes `site/assets/asset-manifest.json` so the deploy step can target the hashed files. The production deploy applies `Cache-Control: public, max-age=31536000, immutable` to fingerprinted paths only, so readers can cache them for a year while HTML pages stay on the short default TTL and always pick up the new hashed filenames on every deploy. The non-fingerprinted originals stay uploaded as a safety net. |
 
 ## Cost Estimate
 
