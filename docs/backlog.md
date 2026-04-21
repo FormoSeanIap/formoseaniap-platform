@@ -10,6 +10,11 @@ Curated follow-up work for the portfolio platform.
 
 ## Later
 
+- [ ] Emit a per-article canonical URL from `article.html`
+  - Why: Lane D added `<link rel="canonical">` to every non-article page, but `site/article.html` and `site-eng/article.html` can't have a static canonical because the displayed article is chosen by the `?id=` query string. Without a per-article canonical, search engines see every distinct article URL as the same base page.
+  - Scope: when `articles.js` loads an article, inject or update a `<link rel="canonical" href="https://www.formoseaniap.com/article.html?id=<id>&lang=<lang>" />` into the document head. Consider also emitting a per-article sitemap entry from `scripts/build_articles.py` into `site/sitemap.xml` / `site-eng/sitemap.xml` at build time, so crawlers can discover articles without relying on JS.
+  - Done when: every article detail URL reports a canonical URL that matches its own `?id=` query, and the sitemap lists each article.
+
 - [ ] Complete the `formoseaniap.com` cutover while Cloudflare remains authoritative
   - Why: the infrastructure now supports the branded production hostname, but Cloudflare must stay as the live DNS provider until the new-domain transfer lock expires.
   - Scope: run a plain `terraform apply`, create the ACM validation records manually in Cloudflare from the Terraform manual-DNS outputs if the first apply stops at validation, rerun the same plain apply, then add the final cutover records in Cloudflare, verifying `www` as the canonical host plus apex and legacy CloudFront redirects.
