@@ -230,6 +230,37 @@ resource "aws_cloudfront_distribution" "site" {
     }
   }
 
+  # Replace the default CloudFront / S3 XML error pages with a branded
+  # HTML 404. S3 with Origin Access Control returns 403 AccessDenied for
+  # both missing and forbidden keys (it cannot distinguish the two
+  # without s3:ListBucket permission), so we intercept both 403 and 404
+  # from the origin and show the same "not found" page. The intercepted
+  # response is normalised to HTTP 404 so crawlers treat it as a missing
+  # URL rather than a forbidden one. The 10-second error caching TTL
+  # keeps error responses fresh enough that a recently-fixed bad link
+  # does not linger on the CDN.
+  #
+  # Note: this mapping is distribution-wide, so a genuine 403 or 404
+  # from the /analytics-api/* admin routes (unauthorised non-admin
+  # user, or an unknown route) is also rewritten to the static 404
+  # page. The admin dashboard is the only consumer of those routes in
+  # practice, and the dashboard JS degrades gracefully on HTML-shaped
+  # responses; seeing "page not found" after trying an unauthorised
+  # admin action is acceptable.
+  custom_error_response {
+    error_caching_min_ttl = 10
+    error_code            = 403
+    response_code         = 404
+    response_page_path    = "/404.html"
+  }
+
+  custom_error_response {
+    error_caching_min_ttl = 10
+    error_code            = 404
+    response_code         = 404
+    response_page_path    = "/404.html"
+  }
+
   viewer_certificate {
     acm_certificate_arn            = aws_acm_certificate_validation.site.certificate_arn
     cloudfront_default_certificate = false
