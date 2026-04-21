@@ -5,6 +5,7 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <meta name="description" content="Private analytics dashboard for the portfolio site." />
+  <meta name="robots" content="noindex, nofollow" />
   <title>Portfolio | Private Analytics</title>
   <script>
     (() => {
@@ -29,6 +30,7 @@
 </head>
 
 <body data-page="analytics-admin">
+  <a class="skip-link" href="#main-content">Skip to main content</a>
   <header class="site-header">
     <div class="site-shell header-row">
       <a class="brand" href="../index.html">
@@ -58,7 +60,7 @@
     </div>
   </header>
 
-  <main class="site-shell" data-analytics-admin>
+  <main class="site-shell" id="main-content" data-analytics-admin>
     <section class="section">
       <div class="hero-copy analytics-admin-hero" data-reveal>
         <p class="kicker">Private Analytics</p>
