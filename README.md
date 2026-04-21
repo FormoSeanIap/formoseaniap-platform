@@ -232,8 +232,8 @@ Source: [`docs/assets/readme/oidc-roles.mmd`](docs/assets/readme/oidc-roles.mmd)
 
 | Path | Purpose |
 | --- | --- |
-| `site/` | Static pages, assets, and generated runtime data for the main site. |
-| `site-eng/` | Static pages, assets, and generated runtime data for the engineering section at `/engineer/`. |
+| `site/` | Static pages, assets, and generated runtime data for the main site. Canonical source of truth for the CSS and JS shared with `site-eng/`. |
+| `site-eng/` | Static pages, assets, and generated runtime data for the engineering section at `/engineer/`. Shared CSS and JS are regenerated from `site/` by `scripts/sync_shared_assets.py` and are not tracked in git; `analytics.js` is the one shared-named file that deliberately stays tracked because it differs by a per-domain allow-list. |
 | `content/` | Markdown articles and site metadata. |
 | `scripts/` | Build, validation, migration, and local utility scripts. |
 | `analytics_backend/` | Lambda handler code for analytics collection and admin reads. |
@@ -250,7 +250,7 @@ Source: [`docs/assets/readme/oidc-roles.mmd`](docs/assets/readme/oidc-roles.mmd)
 
 ### Running the preview
 
-Run the site preview and the podcast proxy in separate terminals when working locally. The site preview serves `site/` as the web root, and the podcast proxy keeps the podcast page working locally without depending on production routing.
+Run the site preview and the podcast proxy in separate terminals when working locally. The site preview serves `site/` as the web root, routes `/engineer/*` to `site-eng/`, and regenerates the shared `site-eng/` CSS and JS from `site/` on startup so a fresh clone has no missing files. The podcast proxy keeps the podcast page working locally without depending on production routing.
 
 ```bash
 python3 scripts/site_preview.py
