@@ -150,12 +150,13 @@ resource "aws_cloudfront_distribution" "site" {
   }
 
   default_cache_behavior {
-    allowed_methods        = ["GET", "HEAD"]
-    cache_policy_id        = var.static_site_cache_policy_id
-    cached_methods         = ["GET", "HEAD"]
-    compress               = true
-    target_origin_id       = local.s3_origin_id
-    viewer_protocol_policy = "redirect-to-https"
+    allowed_methods            = ["GET", "HEAD"]
+    cache_policy_id            = var.static_site_cache_policy_id
+    cached_methods             = ["GET", "HEAD"]
+    compress                   = true
+    response_headers_policy_id = var.static_site_response_headers_policy_id
+    target_origin_id           = local.s3_origin_id
+    viewer_protocol_policy     = "redirect-to-https"
 
     dynamic "function_association" {
       for_each = [aws_cloudfront_function.redirect_to_canonical.arn]
@@ -207,13 +208,14 @@ resource "aws_cloudfront_distribution" "site" {
   }
 
   ordered_cache_behavior {
-    allowed_methods        = ["GET", "HEAD"]
-    cache_policy_id        = var.static_site_cache_policy_id
-    cached_methods         = ["GET", "HEAD"]
-    compress               = true
-    path_pattern           = "/engineer/*"
-    target_origin_id       = local.engineering_s3_origin_id
-    viewer_protocol_policy = "redirect-to-https"
+    allowed_methods            = ["GET", "HEAD"]
+    cache_policy_id            = var.static_site_cache_policy_id
+    cached_methods             = ["GET", "HEAD"]
+    compress                   = true
+    path_pattern               = "/engineer/*"
+    response_headers_policy_id = var.static_site_response_headers_policy_id
+    target_origin_id           = local.engineering_s3_origin_id
+    viewer_protocol_policy     = "redirect-to-https"
 
     function_association {
       event_type   = "viewer-request"

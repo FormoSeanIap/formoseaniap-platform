@@ -23,6 +23,12 @@ variable "static_site_cache_policy_id" {
   type        = string
 }
 
+variable "static_site_response_headers_policy_id" {
+  default     = "67f7725c-6f97-4210-82d7-5512b31e9d03"
+  description = "CloudFront response headers policy ID applied to static site cache behaviors. Defaults to AWS-managed SecurityHeadersPolicy (Referrer-Policy, Strict-Transport-Security, X-Content-Type-Options, X-Frame-Options, X-XSS-Protection). Keep this a managed policy ID because the CloudFront flat-rate Free plan does not allow custom response headers policies."
+  type        = string
+}
+
 variable "default_root_object" {
   default     = "index.html"
   description = "CloudFront default root object for the static site."
