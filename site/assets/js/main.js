@@ -89,6 +89,7 @@
 
   const landingCanvas = document.querySelector("#landing-canvas");
   if (landingCanvas) {
+    const reducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)");
     const orbCount = window.innerWidth < 720 ? 14 : 24;
 
     for (let i = 0; i < orbCount; i += 1) {
@@ -111,12 +112,17 @@
       landingCanvas.appendChild(orb);
     }
 
-    window.addEventListener("pointermove", (event) => {
-      const rect = landingCanvas.getBoundingClientRect();
-      const px = (event.clientX - rect.left) / rect.width - 0.5;
-      const py = (event.clientY - rect.top) / rect.height - 0.5;
-      landingCanvas.style.transform = `translate(${px * 10}px, ${py * 10}px)`;
-    });
+    // Only attach the parallax-on-pointer effect when the OS is not
+    // asking for reduced motion. CSS already freezes the orb-drift
+    // animation under prefers-reduced-motion; this covers the JS path.
+    if (!reducedMotion.matches) {
+      window.addEventListener("pointermove", (event) => {
+        const rect = landingCanvas.getBoundingClientRect();
+        const px = (event.clientX - rect.left) / rect.width - 0.5;
+        const py = (event.clientY - rect.top) / rect.height - 0.5;
+        landingCanvas.style.transform = `translate(${px * 10}px, ${py * 10}px)`;
+      });
+    }
   }
 
   const yearNode = document.querySelector("[data-year]");
