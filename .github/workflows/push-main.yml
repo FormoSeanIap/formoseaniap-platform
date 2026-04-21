@@ -163,8 +163,37 @@ jobs:
       - name: Sync site to S3
         run: aws s3 sync prod-artifact/site/ "s3://${{ steps.tf_outputs.outputs.site_bucket_name }}/" --delete
 
+      - name: Apply immutable cache-control to fingerprinted main-site assets
+        # Fingerprinted CSS/JS files have a 10-char hex hash in their filename
+        # (e.g. `assets/css/components.abc1234567.css`). Their content never
+        # changes for a given filename, so they can safely be cached for a
+        # year. The non-fingerprinted siblings keep the default short TTL so
+        # HTML references to them still refresh at the usual cadence.
+        run: |
+          set -euo pipefail
+          aws s3 cp "s3://${{ steps.tf_outputs.outputs.site_bucket_name }}/assets/" \
+            "s3://${{ steps.tf_outputs.outputs.site_bucket_name }}/assets/" \
+            --recursive \
+            --exclude "*" \
+            --include "css/*.??????????.css" \
+            --include "js/*.??????????.js" \
+            --metadata-directive REPLACE \
+            --cache-control "public, max-age=31536000, immutable"
+
       - name: Sync engineering site to S3 under /engineer prefix
         run: aws s3 sync prod-artifact/site-eng/ "s3://${{ steps.tf_outputs.outputs.engineering_site_bucket_name }}/engineer/" --delete
+
+      - name: Apply immutable cache-control to fingerprinted engineering-site assets
+        run: |
+          set -euo pipefail
+          aws s3 cp "s3://${{ steps.tf_outputs.outputs.engineering_site_bucket_name }}/engineer/assets/" \
+            "s3://${{ steps.tf_outputs.outputs.engineering_site_bucket_name }}/engineer/assets/" \
+            --recursive \
+            --exclude "*" \
+            --include "css/*.??????????.css" \
+            --include "js/*.??????????.js" \
+            --metadata-directive REPLACE \
+            --cache-control "public, max-age=31536000, immutable"
 
       - name: Invalidate production CloudFront cache
         id: cloudfront_invalidation
