@@ -4,20 +4,13 @@
 <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <meta name="description" content="Article detail page." />
-    <title>Engineering | Article</title>
+    <meta name="description" content="Page not found." />
+    <meta name="robots" content="noindex" />
+    <title>Portfolio | Page not found</title>
     <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
     <link rel="icon" type="image/svg+xml" href="/favicon-dark.svg" media="(prefers-color-scheme: dark)" />
     <link rel="icon" sizes="any" href="/favicon.ico" />
     <link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png" />
-    <meta property="og:type" content="article" />
-    <meta property="og:site_name" content="Sêng-Gān Ia̍p" />
-    <meta property="og:title" content="Engineering | Article" />
-    <meta property="og:description" content="Article detail page." />
-    <meta property="og:locale" content="en_US" />
-    <meta name="twitter:card" content="summary" />
-    <meta name="twitter:title" content="Engineering | Article" />
-    <meta name="twitter:description" content="Article detail page." />
     <script>
         (() => {
             try {
@@ -33,28 +26,29 @@
     <link
         href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;700&family=Noto+Sans+JP:wght@400;500&family=Noto+Serif+JP:wght@500;700&display=swap"
         rel="stylesheet" />
-    <link rel="stylesheet" href="assets/css/variables.css" />
-    <link rel="stylesheet" href="assets/css/base.css" />
-    <link rel="stylesheet" href="assets/css/layout.css" />
-    <link rel="stylesheet" href="assets/css/components.css" />
-    <link rel="alternate" type="application/rss+xml" title="Technical Articles RSS (EN)" href="rss.xml" />
+    <link rel="stylesheet" href="/assets/css/variables.css" />
+    <link rel="stylesheet" href="/assets/css/base.css" />
+    <link rel="stylesheet" href="/assets/css/layout.css" />
+    <link rel="stylesheet" href="/assets/css/components.css" />
 </head>
 
-<body data-page="eng-articles">
+<body data-page="not-found">
     <a class="skip-link" href="#main-content">Skip to main content</a>
     <header class="site-header">
         <div class="site-shell header-row">
-            <a class="brand" href="index.html">
+            <a class="brand" href="/">
                 <strong>Sêng-Gān Ia̍p</strong>
-                <span>Platform Engineer</span>
+                <span>Platform Engineer / Writer / Creator</span>
             </a>
             <div class="header-actions">
                 <nav class="site-nav" aria-label="Main navigation">
                     <ul>
-                        <li><a class="nav-link" data-nav="eng-home" href="index.html">Home</a></li>
-                        <li><a class="nav-link" data-nav="eng-projects" href="projects.html">Projects</a></li>
-                        <li><a class="nav-link" data-nav="eng-articles" href="articles.html">Articles</a></li>
-                        <li><a class="nav-link" href="/">Main Site</a></li>
+                        <li><a class="nav-link" href="/">Home</a></li>
+                        <li><a class="nav-link" href="/projects.html">Projects</a></li>
+                        <li><a class="nav-link" href="/podcasts.html">Podcasts</a></li>
+                        <li><a class="nav-link" href="/articles.html">Articles</a></li>
+                        <li><a class="nav-link" href="/about.html">About</a></li>
+                        <li><a class="nav-link" href="/engineer/">Engineering</a></li>
                     </ul>
                 </nav>
                 <div class="theme-switcher" role="group" aria-label="Color theme">
@@ -72,34 +66,37 @@
         </div>
     </header>
 
-    <main class="site-shell" id="main-content" data-article-detail>
+    <main class="site-shell" id="main-content">
         <section class="section">
-            <div class="hero-copy article-top-anchor" id="article-top" data-reveal>
-                <p class="kicker" id="article-kicker">Article</p>
-                <h1 id="article-title">Loading article...</h1>
-                <p class="lead" id="article-excerpt"></p>
-                <p class="meta" id="article-meta"></p>
-                <div class="article-filter-row" id="article-links"></div>
+            <div class="hero-copy" data-reveal>
+                <p class="kicker">404</p>
+                <h1>This page slipped past the gate.</h1>
+                <p class="lead">
+                    The URL you followed doesn't match anything on the site. No judgement; links rot, pages move, typos
+                    happen.
+                </p>
+                <p>
+                    You can head back to the <a href="/">main site</a> or the <a href="/engineer/">engineering
+                        portfolio</a>, or
+                    jump to one of the sections below.
+                </p>
+                <nav class="landing-links" aria-label="Section shortcuts">
+                    <a class="landing-link" href="/about.html">About</a>
+                    <a class="landing-link" href="/projects.html">Projects</a>
+                    <a class="landing-link" href="/articles.html">Articles</a>
+                    <a class="landing-link" href="/podcasts.html">Podcasts</a>
+                    <a class="landing-link" href="/engineer/">Engineering</a>
+                </nav>
             </div>
-        </section>
-
-        <section class="section">
-            <article class="card" data-reveal data-delay="60">
-                <div class="article-content" id="article-body"></div>
-                <div class="tag-list" id="article-tags"></div>
-            </article>
-            <div class="article-filter-row article-end-actions" id="article-end-links"></div>
         </section>
     </main>
 
     <footer class="site-shell footer">
         <p>Copyright <span data-year></span> Sêng-Gān Ia̍p</p>
-        <p>New technical writing will be published incrementally.</p>
+        <p>Page not found.</p>
     </footer>
 
-    <script src="assets/js/main.js"></script>
-    <script src="assets/js/articles.js"></script>
-    <script src="assets/js/analytics.js"></script>
+    <script src="/assets/js/main.js"></script>
 </body>
 
 </html>
