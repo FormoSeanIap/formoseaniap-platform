@@ -4,6 +4,7 @@ from pathlib import Path
 from scripts.build_articles import (
     ArticleRecord,
     build_payloads,
+    build_sitemap_xml,
     derive_subcategory_metadata,
     markdown_to_html,
     propagate_series_cover_images,
@@ -367,6 +368,64 @@ class SearchAndSeriesCoverTests(unittest.TestCase):
 
         self.assertEqual(index_item["preview_image"], "/assets/custom-cover.jpg")
         self.assertEqual(index_item["series_preview_image"], "/assets/custom-cover.jpg")
+
+
+class SitemapGenerationTests(unittest.TestCase):
+    """Cover the build_sitemap_xml helper used to regenerate site/sitemap.xml
+    and site-eng/sitemap.xml on every build."""
+
+    SITE_CONFIG = {
+        "site_name": "Example",
+        "site_url": "https://example.com",
+        "author": "Example Author",
+    }
+
+    STATIC = (
+        ("/", "weekly", "1.0"),
+        ("/about.html", "monthly", "0.6"),
+    )
+
+    def test_static_entries_are_emitted_with_absolute_urls(self) -> None:
+        xml = build_sitemap_xml(self.SITE_CONFIG, self.STATIC, [])
+
+        self.assertIn('<?xml version="1.0" encoding="UTF-8"?>', xml)
+        self.assertIn('<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">', xml)
+        self.assertIn("<loc>https://example.com/</loc>", xml)
+        self.assertIn("<loc>https://example.com/about.html</loc>", xml)
+        self.assertEqual(xml.count("<url>"), 2)
+        self.assertTrue(xml.endswith("</urlset>\n"))
+
+    def test_article_entries_are_appended_after_static_entries(self) -> None:
+        article_entries = [
+            ("/article.html?id=one&lang=en", "monthly", "0.5"),
+            ("/article.html?id=two&lang=zh", "monthly", "0.5"),
+        ]
+
+        xml = build_sitemap_xml(self.SITE_CONFIG, self.STATIC, article_entries)
+
+        self.assertEqual(xml.count("<url>"), 4)
+        self.assertIn(
+            "<loc>https://example.com/article.html?id=one&amp;lang=en</loc>",
+            xml,
+        )
+        self.assertIn(
+            "<loc>https://example.com/article.html?id=two&amp;lang=zh</loc>",
+            xml,
+        )
+
+    def test_article_entries_work_with_engineer_prefix(self) -> None:
+        article_entries = [
+            ("/engineer/article.html?id=sre&lang=en", "monthly", "0.5"),
+        ]
+        static = (("/engineer/", "monthly", "0.9"),)
+
+        xml = build_sitemap_xml(self.SITE_CONFIG, static, article_entries)
+
+        self.assertIn(
+            "<loc>https://example.com/engineer/article.html?id=sre&amp;lang=en</loc>",
+            xml,
+        )
+        self.assertEqual(xml.count("<url>"), 2)
 
 
 if __name__ == "__main__":

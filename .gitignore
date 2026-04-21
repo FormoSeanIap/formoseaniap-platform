@@ -12,6 +12,7 @@ site/data/articles.search.json
 !site/data/projects.json
 site/rss.xml
 site/zh/rss.xml
+site/sitemap.xml
 site/assets/articles/
 
 # Engineering site generated outputs
@@ -19,6 +20,7 @@ site-eng/data/articles/
 site-eng/data/articles.index.json
 site-eng/data/articles.search.json
 site-eng/rss.xml
+site-eng/sitemap.xml
 site-eng/assets/articles/
 
 # Shared assets synced from site/ by scripts/sync_shared_assets.py.

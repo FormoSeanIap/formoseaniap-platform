@@ -732,6 +732,115 @@
     document.documentElement.setAttribute("lang", lang === "zh" ? "zh-Hant" : "en");
   };
 
+  const SITE_URL = "https://www.formoseaniap.com";
+
+  // Distinguish main tree vs engineering tree so the title prefix matches the
+  // static template that ships for each. The two article.html files advertise
+  // "Portfolio | Article" and "Engineering | Article" respectively; keeping
+  // the runtime update consistent avoids a brief flash of the wrong prefix
+  // while the fetch lands.
+  const isEngineeringTree = () => {
+    try {
+      return window.location.pathname.startsWith("/engineer/");
+    } catch (err) {
+      return false;
+    }
+  };
+
+  const titlePrefix = () => (isEngineeringTree() ? "Engineering" : "Portfolio");
+
+  // Article page URLs are relative (`article.html?id=...&lang=...`). Resolve
+  // them against the page's own location so the same helper works on
+  // `/article.html` (main tree) and `/engineer/article.html` (engineering
+  // tree). That way the runtime canonical and OG URLs always point at the
+  // tree the reader is actually viewing.
+  const buildArticleCanonicalUrl = (article, lang) => {
+    try {
+      const relative = article?.page_url || `article.html?id=${encodeURIComponent(article?.id || "")}&lang=${encodeURIComponent(lang)}`;
+      // Resolve against the current location so both `/article.html?...`
+      // (main site) and `/engineer/article.html?...` (engineering tree) are
+      // produced correctly.
+      const resolved = new URL(relative, window.location.href);
+      return `${SITE_URL}${resolved.pathname}${resolved.search}`;
+    } catch (err) {
+      return `${SITE_URL}/article.html?id=${article?.id || ""}&lang=${lang}`;
+    }
+  };
+
+  const ensureLinkElement = (rel) => {
+    let node = document.querySelector(`link[rel="${rel}"]`);
+    if (!node) {
+      node = document.createElement("link");
+      node.setAttribute("rel", rel);
+      document.head.appendChild(node);
+    }
+    return node;
+  };
+
+  const setMetaByProperty = (property, content) => {
+    const node = document.querySelector(`meta[property="${property}"]`);
+    if (node) {
+      node.setAttribute("content", content);
+    }
+  };
+
+  const setMetaByName = (name, content) => {
+    let node = document.querySelector(`meta[name="${name}"]`);
+    if (!node) {
+      node = document.createElement("meta");
+      node.setAttribute("name", name);
+      document.head.appendChild(node);
+    }
+    node.setAttribute("content", content);
+  };
+
+  const setDescriptionMeta = (content) => {
+    const node = document.querySelector('meta[name="description"]');
+    if (node) {
+      node.setAttribute("content", content);
+    } else {
+      setMetaByName("description", content);
+    }
+  };
+
+  // Update the canonical URL and Open Graph / Twitter Card metadata for the
+  // article detail page once we know which article is actually being shown.
+  // The static `article.html` template ships a generic description so link
+  // previews fall back to something sensible if JS fails; this runtime pass
+  // upgrades each share preview to the article's real title and excerpt.
+  const applyArticleHeadMetadata = (article, lang) => {
+    if (!article) {
+      return;
+    }
+
+    const canonicalUrl = buildArticleCanonicalUrl(article, lang);
+    const title = article.title || "";
+    const description = (article.excerpt || "").trim() || title;
+    const localeAttr = lang === "zh" ? "zh_TW" : "en_US";
+
+    const canonical = ensureLinkElement("canonical");
+    canonical.setAttribute("href", canonicalUrl);
+
+    setDescriptionMeta(description);
+
+    setMetaByProperty("og:title", title ? `${titlePrefix()} | ${title}` : `${titlePrefix()} | Article`);
+    setMetaByProperty("og:description", description);
+    setMetaByProperty("og:locale", localeAttr);
+    // Ensure og:url exists (static template omits it for articles because the
+    // canonical URL isn't knowable server-side). Insert a placeholder tag if
+    // absent so future head-scrapers can find it.
+    let ogUrl = document.querySelector('meta[property="og:url"]');
+    if (!ogUrl) {
+      ogUrl = document.createElement("meta");
+      ogUrl.setAttribute("property", "og:url");
+      document.head.appendChild(ogUrl);
+    }
+    ogUrl.setAttribute("content", canonicalUrl);
+
+    setMetaByName("twitter:title", title ? `${titlePrefix()} | ${title}` : `${titlePrefix()} | Article`);
+    setMetaByName("twitter:description", description);
+  };
+
   const buildDetailActionLinks = (copy, article, lang, { includeBackToTop = false } = {}) => {
     const links = [
       `<a class="tag filter-chip" href="${buildPageUrl({ lang })}">${escapeHtml(copy.backToList)}</a>`
@@ -1298,7 +1407,8 @@
         fetchJson(`data/articles/${lang}/${encodeURIComponent(id)}.json`)
       ]);
 
-      document.title = `Portfolio | ${article.title}`;
+      document.title = `${titlePrefix()} | ${article.title}`;
+      applyArticleHeadMetadata(article, lang);
       titleNode.textContent = article.title;
       excerptNode.textContent = article.excerpt || "";
       const partText = article.part_number ? ` / ${partLabel(article.part_number, lang)}` : "";
