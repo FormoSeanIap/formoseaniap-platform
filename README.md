@@ -117,7 +117,8 @@ The podcast feeds are owned by a third party, so the browser cannot rely on upst
 | Analytics storage | Lambda writes counters and uniqueness state to DynamoDB. |
 | Monitoring | CloudWatch dashboard and SNS-backed Lambda alarms are provisioned by Terraform. |
 | Custom domains | `www.formoseaniap.com` is the canonical host, with apex redirect support. |
-| SEO surface | Every non-article page declares a `rel=canonical` absolute URL. `site/robots.txt` and `site/sitemap.xml` live at the main-site root and cover both the main site and the engineering section, which is possible because the two sections share one CloudFront distribution. |
+| SEO surface | Every non-article page declares a `rel=canonical` absolute URL and a baseline set of Open Graph + Twitter Card meta tags so link previews on LinkedIn, Slack, Discord, and similar are legible instead of bare URLs. `site/robots.txt` and `site/sitemap.xml` live at the main-site root and cover both the main site and the engineering section, which is possible because the two sections share one CloudFront distribution. The admin dashboards are both `noindex, nofollow` and Disallowed in `robots.txt`. |
+| Accessibility | Every page has a visually-hidden skip link to `#main-content`, honours `prefers-reduced-motion` globally (including the landing canvas orb drift and parallax), and carries a single `h1` per page. Keyboard focus rings use a subtle accent outline. |
 | Engineering content path | CloudFront routes `/engineer/*` to a separate S3 origin. Object keys in that bucket keep the `engineer/` prefix so the CloudFront cache key for engineering pages stays distinct from main-site pages that share a filename. |
 | Engineering S3 bucket | A separate private S3 bucket holds the engineering section content, accessed through its own Origin Access Control on the same CloudFront distribution. |
 | Cost control | The stack uses AWS-managed CloudFront cache policies and keeps flat-rate CloudFront plan handling as a deliberate console-managed step. |
@@ -146,7 +147,7 @@ The traffic-sensitive part of the stack is the backend behind CloudFront:
 - `Lambda` runs the collector and admin handlers.
 - `DynamoDB` stores counters and uniqueness state.
 
-The current analytics collector writes more than one record per tracked view. Each collect request attempts two uniqueness writes and performs two counter updates, so DynamoDB contributes more to variable cost than it would in a simpler single-write design.
+The analytics collector writes more than one record per tracked view. Each collect request attempts two uniqueness writes and performs two counter updates (one pair for the entity key, one pair for the per-domain `SITE#ALL#<domain>` roll-up). The admin overview derives the combined site-wide totals from the two per-domain rows at query time rather than maintaining a third write-time aggregate.
 
 Using AWS reference pricing as a working estimate:
 

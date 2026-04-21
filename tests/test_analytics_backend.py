@@ -217,15 +217,15 @@ class CollectorStoreTests(unittest.TestCase):
         self.assertEqual(second, {"entity_unique": False, "site_unique": False})
         entity_counter = fake_resource.counters[("ARTICLE#demo-article#en#main", "DAY#2026-04-12")]
         site_domain_counter = fake_resource.counters[("SITE#ALL#main", "DAY#2026-04-12")]
-        site_combined_counter = fake_resource.counters[("SITE#ALL", "DAY#2026-04-12")]
         self.assertEqual(entity_counter["views"], 2)
         self.assertEqual(entity_counter["unique_visitors"], 1)
         self.assertEqual(entity_counter["domain"], "main")
         self.assertEqual(site_domain_counter["views"], 2)
         self.assertEqual(site_domain_counter["unique_visitors"], 1)
         self.assertEqual(site_domain_counter["domain"], "main")
-        self.assertEqual(site_combined_counter["views"], 2)
-        self.assertIsNone(site_combined_counter["domain"])
+        # Lane C dropped the combined ``SITE#ALL`` write; the admin overview
+        # derives the combined view from the per-domain rows at query time.
+        self.assertNotIn(("SITE#ALL", "DAY#2026-04-12"), fake_resource.counters)
 
     def test_record_view_aliases_reserved_views_attribute(self):
         fake_resource = FakeDynamoResource()
@@ -257,6 +257,66 @@ class CollectorStoreTests(unittest.TestCase):
         entity_counter = fake_resource.counters[("PAGE#home#main", "DAY#2026-04-12")]
         self.assertEqual(entity_counter["views"], 1)
 
+    def test_record_view_writes_two_counter_keys_per_event(self):
+        """Lane C contract: one counter row per entity + one per SITE#ALL#<domain>.
+
+        The collector used to write a third ``SITE#ALL`` row that
+        aggregated across domains at write time. After Lane C, the admin
+        reader derives the combined view from the per-domain rows at
+        query time instead. This test pins that contract so a future
+        change that re-introduces the third write fails loudly rather
+        than quietly bringing back the cost regression.
+        """
+        fake_resource = FakeDynamoResource()
+        store = DynamoCollectorStore(
+            counters_table_name="analytics_daily_counters",
+            uniques_table_name="analytics_daily_uniques",
+            dynamodb_resource=fake_resource,
+            dynamodb_client=fake_resource.meta.client,
+        )
+        event = validate_view_event(
+            {
+                "scope": "article",
+                "page_key": None,
+                "article_id": "demo-article",
+                "lang": "en",
+                "visitor_id": "123e4567-e89b-12d3-a456-426614174000",
+                "domain": "engineering",
+            }
+        )
+
+        store.record_view(
+            event,
+            hashed_visitor_id="visitor-d",
+            day=date(2026, 4, 12),
+            uniques_ttl_days=7,
+        )
+
+        counter_keys = set(fake_resource.counters.keys())
+        self.assertEqual(
+            counter_keys,
+            {
+                ("ARTICLE#demo-article#en#engineering", "DAY#2026-04-12"),
+                ("SITE#ALL#engineering", "DAY#2026-04-12"),
+            },
+        )
+        self.assertNotIn(("SITE#ALL", "DAY#2026-04-12"), counter_keys)
+
+        unique_keys = set(fake_resource.uniques.items.keys())
+        self.assertEqual(
+            unique_keys,
+            {
+                (
+                    "ENTITY#ARTICLE#demo-article#en#engineering#DAY#2026-04-12",
+                    "VISITOR#visitor-d",
+                ),
+                (
+                    "ENTITY#SITE#ALL#engineering#DAY#2026-04-12",
+                    "VISITOR#visitor-d",
+                ),
+            },
+        )
+
     def test_record_view_backfills_missing_counter_metrics(self):
         fake_resource = FakeDynamoResource()
         fake_resource.counters[("PAGE#home#main", "DAY#2026-04-12")] = {
@@ -280,17 +340,6 @@ class CollectorStoreTests(unittest.TestCase):
             "date": "2026-04-12",
             "gsi1pk": "DAY#2026-04-12",
             "gsi1sk": "SITE#ALL#main",
-        }
-        fake_resource.counters[("SITE#ALL", "DAY#2026-04-12")] = {
-            "pk": "SITE#ALL",
-            "sk": "DAY#2026-04-12",
-            "entity_type": "site",
-            "entity_id": "ALL",
-            "lang": None,
-            "domain": None,
-            "date": "2026-04-12",
-            "gsi1pk": "DAY#2026-04-12",
-            "gsi1sk": "SITE#ALL",
         }
         store = DynamoCollectorStore(
             counters_table_name="analytics_daily_counters",
@@ -323,6 +372,13 @@ class CollectorStoreTests(unittest.TestCase):
 
 class AdminAggregationTests(unittest.TestCase):
     def test_build_overview_rolls_up_daily_metrics(self):
+        """Legacy ``SITE#ALL`` rows still feed the combined overview.
+
+        This covers the short-lived migration window after the Lane C
+        write-reduction refactor landed; rows written by the old
+        collector stay readable until they TTL out of the counters
+        table.
+        """
         reader = FakeAnalyticsReader(
             day_items={
                 "2026-04-10": [
@@ -344,6 +400,90 @@ class AdminAggregationTests(unittest.TestCase):
         self.assertEqual(payload["summary"]["article_views"], 6)
         self.assertEqual(payload["summary"]["article_unique_visitors"], 4)
         self.assertEqual(len(payload["daily"]), 2)
+
+    def test_build_overview_combined_sums_per_domain_site_rows(self):
+        """Per-domain ``SITE#ALL#<domain>`` rows sum into the combined overview.
+
+        This is the post-Lane-C path: the collector no longer writes a
+        dedicated ``SITE#ALL`` row, so the reader derives the combined
+        totals from the two per-domain rows.
+        """
+        reader = FakeAnalyticsReader(
+            day_items={
+                "2026-04-10": [
+                    {
+                        "pk": "SITE#ALL#main",
+                        "entity_type": "site",
+                        "views": 8,
+                        "unique_visitors": 4,
+                        "domain": "main",
+                    },
+                    {
+                        "pk": "SITE#ALL#engineering",
+                        "entity_type": "site",
+                        "views": 2,
+                        "unique_visitors": 1,
+                        "domain": "engineering",
+                    },
+                    {
+                        "pk": "ARTICLE#a#en#main",
+                        "entity_type": "article",
+                        "entity_id": "a",
+                        "lang": "en",
+                        "views": 3,
+                        "unique_visitors": 2,
+                        "domain": "main",
+                    },
+                ],
+            }
+        )
+
+        payload = build_overview_payload(
+            reader, DateRange(start=date(2026, 4, 10), end=date(2026, 4, 10))
+        )
+
+        self.assertEqual(payload["summary"]["site_views"], 10)
+        self.assertEqual(payload["summary"]["site_unique_visitors"], 5)
+        self.assertEqual(payload["summary"]["article_views"], 3)
+        self.assertEqual(payload["summary"]["article_unique_visitors"], 2)
+
+    def test_build_overview_prefers_per_domain_rows_over_legacy_site_all(self):
+        """When both shapes are present, the reader uses per-domain rows.
+
+        If the counters table has both a legacy ``SITE#ALL`` row and the
+        per-domain rows on the same day (for instance, during the brief
+        window immediately after Lane C ships when both shapes may exist
+        within the uniques-TTL period), the per-domain rows win so we
+        don't double-count the views.
+        """
+        reader = FakeAnalyticsReader(
+            day_items={
+                "2026-04-10": [
+                    {"pk": "SITE#ALL", "entity_type": "site", "views": 99, "unique_visitors": 99},
+                    {
+                        "pk": "SITE#ALL#main",
+                        "entity_type": "site",
+                        "views": 8,
+                        "unique_visitors": 4,
+                        "domain": "main",
+                    },
+                    {
+                        "pk": "SITE#ALL#engineering",
+                        "entity_type": "site",
+                        "views": 2,
+                        "unique_visitors": 1,
+                        "domain": "engineering",
+                    },
+                ],
+            }
+        )
+
+        payload = build_overview_payload(
+            reader, DateRange(start=date(2026, 4, 10), end=date(2026, 4, 10))
+        )
+
+        self.assertEqual(payload["summary"]["site_views"], 10)
+        self.assertEqual(payload["summary"]["site_unique_visitors"], 5)
 
     def test_build_articles_supports_combined_and_variant_grouping(self):
         reader = FakeAnalyticsReader(
