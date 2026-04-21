@@ -186,8 +186,35 @@ def build_overview_payload(
                 if item.get("entity_type") == "article" and _matches_domain_filter(item, domain_filter)
             ]
         else:
-            # Combined: use the aggregate SITE#ALL key
-            site_item = next((item for item in items if item.get("pk") == "SITE#ALL"), None)
+            # Combined overview: derive the site-wide totals from the per-domain
+            # ``SITE#ALL#<domain>`` rows plus any legacy ``SITE#ALL`` rows that
+            # the collector wrote before the Lane C write-reduction refactor.
+            # Legacy ``SITE#ALL`` rows TTL out of the counters table eventually,
+            # so this fallback is a short-lived migration path; after the last
+            # legacy row ages out, only the per-domain rows contribute.
+            #
+            # Note: summing per-domain rows means a visitor who views both the
+            # main site and the /engineer/ section on the same day counts as
+            # two unique visitors on the combined view instead of one. That is
+            # a deliberate, documented semantic change; see the Lane C PR.
+            legacy_site_item = next(
+                (item for item in items if item.get("pk") == "SITE#ALL"),
+                None,
+            )
+            per_domain_site_items = [
+                item for item in items
+                if item.get("entity_type") == "site"
+                and str(item.get("pk") or "").startswith("SITE#ALL#")
+            ]
+            if per_domain_site_items:
+                site_item = {
+                    "views": sum(_item_views(item) for item in per_domain_site_items),
+                    "unique_visitors": sum(
+                        _item_unique_visitors(item) for item in per_domain_site_items
+                    ),
+                }
+            else:
+                site_item = legacy_site_item
             article_items = [item for item in items if item.get("entity_type") == "article"]
 
         row = {

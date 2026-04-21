@@ -10,6 +10,11 @@ Curated follow-up work for the portfolio platform.
 
 ## Later
 
+- [ ] Recalibrate the analytics cost estimate in `README.md` against the post-Lane-C write pattern
+  - Why: Lane C dropped the third `SITE#ALL` write per collect event, which both made the README's "two uniqueness writes and performs two counter updates" description accurate and shifted the actual DynamoDB cost per 1M requests downward by roughly a third. The "Cost Estimate" dollar figures were order-of-magnitude placeholders that predate Lane C and have not been recomputed.
+  - Scope: compute the real DynamoDB on-demand cost per 1M collect events under the new 2 unique-claim + 2 counter-update pattern at Free-tier pricing, update the per-1M-request line, and propagate into the Small/Medium/Large scenario rows.
+  - Done when: the cost table in `README.md` reflects the post-Lane-C write count, and the backend variable cost line in the Variable backend cost section is consistent with it.
+
 - [ ] Emit a per-article canonical URL from `article.html`
   - Why: Lane D added `<link rel="canonical">` to every non-article page, but `site/article.html` and `site-eng/article.html` can't have a static canonical because the displayed article is chosen by the `?id=` query string. Without a per-article canonical, search engines see every distinct article URL as the same base page.
   - Scope: when `articles.js` loads an article, inject or update a `<link rel="canonical" href="https://www.formoseaniap.com/article.html?id=<id>&lang=<lang>" />` into the document head. Consider also emitting a per-article sitemap entry from `scripts/build_articles.py` into `site/sitemap.xml` / `site-eng/sitemap.xml` at build time, so crawlers can discover articles without relying on JS.
