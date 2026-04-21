@@ -242,9 +242,15 @@ class DynamoCollectorStore:
             datetime.combine(day + timedelta(days=uniques_ttl_days), time.min, tzinfo=timezone.utc).timestamp()
         )
 
+        # Two unique-claim writes + two counter UpdateItem writes per collect
+        # event. The admin overview derives the combined ``SITE#ALL`` bucket
+        # from ``SITE#ALL#main`` + ``SITE#ALL#engineering`` at read time, so
+        # we no longer write a third (combined) row here. See
+        # analytics_backend/admin.py::build_overview_payload for the read
+        # side and the Lane C PR body for the cross-domain unique-visitor
+        # tradeoff this introduces.
         entity_unique_key = event.entity_key
         site_domain_unique_key = f"SITE#ALL#{event.domain}"
-        site_combined_unique_key = "SITE#ALL"
         counter_targets = [
             {
                 "entity_key": event.entity_key,
@@ -260,13 +266,6 @@ class DynamoCollectorStore:
                 "lang": None,
                 "domain": event.domain,
             },
-            {
-                "entity_key": "SITE#ALL",
-                "entity_type": "site",
-                "entity_id": "ALL",
-                "lang": None,
-                "domain": None,
-            },
         ]
 
         entity_unique = self._claim_unique(
@@ -281,19 +280,13 @@ class DynamoCollectorStore:
             hashed_visitor_id=hashed_visitor_id,
             expires_at=expires_at,
         )
-        site_combined_unique = self._claim_unique(
-            entity_key=site_combined_unique_key,
-            day_key=day_key,
-            hashed_visitor_id=hashed_visitor_id,
-            expires_at=expires_at,
-        )
 
         result = {
             "entity_unique": entity_unique,
             "site_unique": site_domain_unique,
         }
 
-        unique_flags = [entity_unique, site_domain_unique, site_combined_unique]
+        unique_flags = [entity_unique, site_domain_unique]
         for target, is_unique in zip(counter_targets, unique_flags, strict=True):
             self._increment_counter(
                 entity_key=target["entity_key"],

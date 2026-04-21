@@ -146,7 +146,7 @@ The traffic-sensitive part of the stack is the backend behind CloudFront:
 - `Lambda` runs the collector and admin handlers.
 - `DynamoDB` stores counters and uniqueness state.
 
-The current analytics collector writes more than one record per tracked view. Each collect request attempts two uniqueness writes and performs two counter updates, so DynamoDB contributes more to variable cost than it would in a simpler single-write design.
+The analytics collector writes more than one record per tracked view. Each collect request attempts two uniqueness writes and performs two counter updates (one pair for the entity key, one pair for the per-domain `SITE#ALL#<domain>` roll-up). The admin overview derives the combined site-wide totals from the two per-domain rows at query time rather than maintaining a third write-time aggregate.
 
 Using AWS reference pricing as a working estimate:
 
