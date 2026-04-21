@@ -169,16 +169,25 @@ jobs:
         # changes for a given filename, so they can safely be cached for a
         # year. The non-fingerprinted siblings keep the default short TTL so
         # HTML references to them still refresh at the usual cadence.
+        #
+        # Two separate passes are needed because --metadata-directive REPLACE
+        # drops the original Content-Type, and CSS vs JS need different MIME
+        # types. Without the explicit --content-type, S3 would serve
+        # binary/octet-stream, which browsers block under X-Content-Type-Options: nosniff.
         run: |
           set -euo pipefail
-          aws s3 cp "s3://${{ steps.tf_outputs.outputs.site_bucket_name }}/assets/" \
-            "s3://${{ steps.tf_outputs.outputs.site_bucket_name }}/assets/" \
-            --recursive \
-            --exclude "*" \
-            --include "css/*.??????????.css" \
-            --include "js/*.??????????.js" \
+          BUCKET="s3://${{ steps.tf_outputs.outputs.site_bucket_name }}"
+          CACHE="public, max-age=31536000, immutable"
+
+          aws s3 cp "${BUCKET}/assets/css/" "${BUCKET}/assets/css/" \
+            --recursive --exclude "*" --include "*.??????????.css" \
             --metadata-directive REPLACE \
-            --cache-control "public, max-age=31536000, immutable"
+            --cache-control "${CACHE}" --content-type "text/css"
+
+          aws s3 cp "${BUCKET}/assets/js/" "${BUCKET}/assets/js/" \
+            --recursive --exclude "*" --include "*.??????????.js" \
+            --metadata-directive REPLACE \
+            --cache-control "${CACHE}" --content-type "application/javascript"
 
       - name: Sync engineering site to S3 under /engineer prefix
         run: aws s3 sync prod-artifact/site-eng/ "s3://${{ steps.tf_outputs.outputs.engineering_site_bucket_name }}/engineer/" --delete
@@ -186,14 +195,18 @@ jobs:
       - name: Apply immutable cache-control to fingerprinted engineering-site assets
         run: |
           set -euo pipefail
-          aws s3 cp "s3://${{ steps.tf_outputs.outputs.engineering_site_bucket_name }}/engineer/assets/" \
-            "s3://${{ steps.tf_outputs.outputs.engineering_site_bucket_name }}/engineer/assets/" \
-            --recursive \
-            --exclude "*" \
-            --include "css/*.??????????.css" \
-            --include "js/*.??????????.js" \
+          BUCKET="s3://${{ steps.tf_outputs.outputs.engineering_site_bucket_name }}"
+          CACHE="public, max-age=31536000, immutable"
+
+          aws s3 cp "${BUCKET}/engineer/assets/css/" "${BUCKET}/engineer/assets/css/" \
+            --recursive --exclude "*" --include "*.??????????.css" \
             --metadata-directive REPLACE \
-            --cache-control "public, max-age=31536000, immutable"
+            --cache-control "${CACHE}" --content-type "text/css"
+
+          aws s3 cp "${BUCKET}/engineer/assets/js/" "${BUCKET}/engineer/assets/js/" \
+            --recursive --exclude "*" --include "*.??????????.js" \
+            --metadata-directive REPLACE \
+            --cache-control "${CACHE}" --content-type "application/javascript"
 
       - name: Invalidate production CloudFront cache
         id: cloudfront_invalidation
