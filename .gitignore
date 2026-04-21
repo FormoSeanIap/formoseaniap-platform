@@ -21,6 +21,19 @@ site-eng/data/articles.search.json
 site-eng/rss.xml
 site-eng/assets/articles/
 
+# Shared assets synced from site/ by scripts/sync_shared_assets.py.
+# site/ is the canonical source; site-eng/ mirrors these at build time.
+site-eng/assets/css/admin.css
+site-eng/assets/css/base.css
+site-eng/assets/css/components.css
+site-eng/assets/css/layout.css
+site-eng/assets/css/variables.css
+site-eng/assets/js/admin-analytics.js
+site-eng/assets/js/articles.js
+site-eng/assets/js/main.js
+site-eng/assets/js/progressive-list.js
+site-eng/assets/js/projects.js
+
 # Generated at deploy time from Terraform outputs; never committed.
 site/data/analytics.config.json
 site-eng/data/analytics.config.json
@@ -40,6 +53,7 @@ pnpm-debug.log*
 __pycache__/
 *.pyc
 .pytest_cache/
+.mypy_cache/
 
 # Terraform
 .terraform/
