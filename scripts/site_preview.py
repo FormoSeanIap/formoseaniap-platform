@@ -3,6 +3,8 @@ from __future__ import annotations
 import argparse
 import errno
 import json
+import subprocess
+import sys
 from functools import partial
 from http import HTTPStatus
 from http.server import SimpleHTTPRequestHandler, ThreadingHTTPServer
@@ -15,6 +17,7 @@ DEFAULT_PORT_SEARCH_LIMIT = 20
 ROOT_DIR = Path(__file__).resolve().parent.parent
 SITE_DIR = ROOT_DIR / "site"
 SITE_ENG_DIR = ROOT_DIR / "site-eng"
+SYNC_SHARED_ASSETS_SCRIPT = ROOT_DIR / "scripts" / "sync_shared_assets.py"
 ENGINEER_PREFIX = "/engineer"
 NO_STORE_PATHS = {
     "/data/analytics.config.json",
@@ -132,6 +135,19 @@ def main() -> None:
     args = parse_args()
     site_dir = Path(args.site_dir).resolve()
     site_eng_dir = SITE_ENG_DIR.resolve()
+
+    # Regenerate shared CSS/JS into site-eng/ so the engineering section works
+    # locally without tracking byte-identical duplicates in git.
+    sync_result = subprocess.run(
+        [sys.executable, str(SYNC_SHARED_ASSETS_SCRIPT)],
+        check=False,
+    )
+    if sync_result.returncode != 0:
+        raise SystemExit(
+            f"scripts/sync_shared_assets.py exited with {sync_result.returncode}; "
+            "cannot start local preview with stale site-eng/ assets."
+        )
+
     SitePreviewHandler.eng_directory = str(site_eng_dir)
     handler = partial(SitePreviewHandler, directory=str(site_dir))
     server, active_port = create_server(
