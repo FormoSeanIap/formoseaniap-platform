@@ -85,6 +85,7 @@ INDEX_PATH = DATA_DIR / "articles.index.json"
 SEARCH_INDEX_PATH = DATA_DIR / "articles.search.json"
 RSS_EN_PATH = SITE_DIR / "rss.xml"
 RSS_ZH_PATH = SITE_DIR / "zh" / "rss.xml"
+SITEMAP_PATH = SITE_DIR / "sitemap.xml"
 
 # Engineering site output paths (technical articles only)
 ENG_SITE_DIR = ROOT / "site-eng"
@@ -94,6 +95,7 @@ ENG_ASSETS_ARTICLES_DIR = ENG_SITE_DIR / "assets" / "articles"
 ENG_INDEX_PATH = ENG_DATA_DIR / "articles.index.json"
 ENG_SEARCH_INDEX_PATH = ENG_DATA_DIR / "articles.search.json"
 ENG_RSS_PATH = ENG_SITE_DIR / "rss.xml"
+ENG_SITEMAP_PATH = ENG_SITE_DIR / "sitemap.xml"
 
 SUPPORTED_LANGS = {"en", "zh"}
 SUPPORTED_CATEGORIES = {"technical", "review", "other"}
@@ -950,6 +952,108 @@ def write_rss(index_payload: dict[str, Any], site_config: dict[str, str]) -> Non
     RSS_ZH_PATH.write_text(build_rss_xml(site_config, zh_articles, "zh"), encoding="utf-8")
 
 
+# Static sitemap entries for the main site. The generator appends one <url>
+# per published article after these.
+SITEMAP_STATIC_ENTRIES_MAIN: tuple[tuple[str, str, str], ...] = (
+    ("/", "weekly", "1.0"),
+    ("/about.html", "monthly", "0.6"),
+    ("/articles.html", "weekly", "0.8"),
+    ("/projects.html", "monthly", "0.7"),
+    ("/podcasts.html", "monthly", "0.6"),
+    ("/engineer/", "monthly", "0.9"),
+    ("/engineer/articles.html", "weekly", "0.8"),
+    ("/engineer/projects.html", "monthly", "0.7"),
+)
+
+# Engineering-only sitemap entries. The main-site sitemap already contains the
+# engineering base pages so crawlers reach both trees from either sitemap.
+SITEMAP_STATIC_ENTRIES_ENG: tuple[tuple[str, str, str], ...] = (
+    ("/engineer/", "monthly", "0.9"),
+    ("/engineer/articles.html", "weekly", "0.8"),
+    ("/engineer/projects.html", "monthly", "0.7"),
+)
+
+
+def _sitemap_article_entries(
+    articles: list[dict[str, Any]],
+    *,
+    path_prefix: str,
+) -> list[tuple[str, str, str]]:
+    """Build (loc-path, changefreq, priority) tuples for every non-external article.
+
+    Skips externally hosted articles (those with a non-empty ``external_url``)
+    because we do not want our sitemap to point at Medium copies. Internal
+    pages are keyed by ``?id=<id>&lang=<lang>`` to give each bilingual variant
+    its own entry — matches the per-article canonical URLs emitted at runtime.
+    """
+    entries: list[tuple[str, str, str]] = []
+    for article in articles:
+        if article.get("external_url"):
+            continue
+        article_id = article.get("id")
+        lang = article.get("lang")
+        if not article_id or not lang:
+            continue
+        loc = f"{path_prefix}article.html?id={article_id}&lang={lang}"
+        entries.append((loc, "monthly", "0.5"))
+    return entries
+
+
+def build_sitemap_xml(
+    site_config: dict[str, str],
+    static_entries: tuple[tuple[str, str, str], ...],
+    article_entries: list[tuple[str, str, str]],
+) -> str:
+    base_url = site_config["site_url"].rstrip("/")
+    lines = [
+        '<?xml version="1.0" encoding="UTF-8"?>',
+        '<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">',
+    ]
+    for loc_path, changefreq, priority in (*static_entries, *article_entries):
+        loc = f"{base_url}{loc_path}"
+        lines.extend(
+            [
+                "  <url>",
+                f"    <loc>{escape(loc, quote=False)}</loc>",
+                f"    <changefreq>{changefreq}</changefreq>",
+                f"    <priority>{priority}</priority>",
+                "  </url>",
+            ]
+        )
+    lines.append("</urlset>")
+    return "\n".join(lines) + "\n"
+
+
+def write_sitemap(
+    index_payload: dict[str, Any], site_config: dict[str, str]
+) -> None:
+    """Write the main-site sitemap, covering both trees and every article."""
+    article_entries = _sitemap_article_entries(
+        index_payload["articles"], path_prefix="/"
+    )
+    SITEMAP_PATH.write_text(
+        build_sitemap_xml(
+            site_config, SITEMAP_STATIC_ENTRIES_MAIN, article_entries
+        ),
+        encoding="utf-8",
+    )
+
+
+def write_engineering_sitemap(
+    index_payload: dict[str, Any], site_config: dict[str, str]
+) -> None:
+    """Write the engineering-tree sitemap covering technical articles only."""
+    article_entries = _sitemap_article_entries(
+        index_payload["articles"], path_prefix="/engineer/"
+    )
+    ENG_SITEMAP_PATH.write_text(
+        build_sitemap_xml(
+            site_config, SITEMAP_STATIC_ENTRIES_ENG, article_entries
+        ),
+        encoding="utf-8",
+    )
+
+
 def write_outputs(payloads: dict[str, Any], site_config: dict[str, str]) -> None:
     write_json(INDEX_PATH, payloads["index"])
     write_json(SEARCH_INDEX_PATH, payloads["search"])
@@ -957,6 +1061,7 @@ def write_outputs(payloads: dict[str, Any], site_config: dict[str, str]) -> None
         out_path = ARTICLES_DATA_DIR / lang / f"{article_id}.json"
         write_json(out_path, detail)
     write_rss(payloads["index"], site_config)
+    write_sitemap(payloads["index"], site_config)
 
 
 def build_engineering_rss_xml(
@@ -1025,6 +1130,7 @@ def write_engineering_outputs(payloads: dict[str, Any], site_config: dict[str, s
         out_path = ENG_ARTICLES_DATA_DIR / lang / f"{article_id}.json"
         write_json(out_path, detail)
     write_engineering_rss(payloads["index"], site_config)
+    write_engineering_sitemap(payloads["index"], site_config)
 
 
 def main() -> None:
@@ -1053,6 +1159,7 @@ def main() -> None:
     print(f"Wrote details dir: {ARTICLES_DATA_DIR.relative_to(ROOT)}")
     print(f"Copied assets: {ASSETS_ARTICLES_DIR.relative_to(ROOT)}")
     print(f"Wrote RSS: {RSS_EN_PATH.relative_to(ROOT)} and {RSS_ZH_PATH.relative_to(ROOT)}")
+    print(f"Wrote sitemap: {SITEMAP_PATH.relative_to(ROOT)}")
 
     # Engineering site output: technical articles only
     technical_records = [r for r in records if r.meta.get("category") == "technical"]
@@ -1086,6 +1193,7 @@ def main() -> None:
     print(f"Wrote eng details dir: {ENG_ARTICLES_DATA_DIR.relative_to(ROOT)}")
     print(f"Copied eng assets: {ENG_ASSETS_ARTICLES_DIR.relative_to(ROOT)}")
     print(f"Wrote eng RSS: {ENG_RSS_PATH.relative_to(ROOT)}")
+    print(f"Wrote eng sitemap: {ENG_SITEMAP_PATH.relative_to(ROOT)}")
 
 
 if __name__ == "__main__":
