@@ -16,6 +16,11 @@ body {
   color: var(--text);
   background: var(--body-background);
   min-height: 100vh;
+  /* Prevent horizontal scrollbar from content that slightly exceeds the
+     viewport (e.g. wide code blocks, landing canvas edge effects). Using
+     clip instead of hidden avoids creating a new scroll container that
+     would interfere with position: sticky on the header. */
+  overflow-x: clip;
 }
 
 body::before {
