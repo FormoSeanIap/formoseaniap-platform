@@ -228,7 +228,7 @@ def check_a11y_basics() -> None:
 
 
 def check_analytics() -> None:
-    """Analytics collector round-trip."""
+    """Analytics collector round-trip and OPTIONS preflight."""
     payload = json.dumps({
         "scope": "page", "page_key": "home",
         "visitor_id": "verify-prod-xxxxxxxxxxxxxxxx", "domain": "main",
@@ -236,6 +236,22 @@ def check_analytics() -> None:
     status, _, body = fetch("/analytics-api/collect", method="POST", data=payload,
                             headers={"Content-Type": "application/json"})
     check("analytics 202", status == 202, f"HTTP {status}")
+
+    # OPTIONS preflight — should return 204 with CORS headers from the
+    # CloudFront Function, not a 404 from the API Gateway origin.
+    status, hdrs, _ = fetch(
+        "/analytics-api/collect",
+        method="OPTIONS",
+        headers={
+            "Origin": f"https://{SITE_HOST}",
+            "Access-Control-Request-Method": "POST",
+        },
+    )
+    acao = hdrs.get("access-control-allow-origin", "")
+    acam = hdrs.get("access-control-allow-methods", "")
+    check("OPTIONS preflight 204",
+          status == 204 and SITE_HOST in acao and "POST" in acam,
+          f"HTTP {status}, ACAO={acao}, ACAM={acam}")
 
 
 def check_fingerprinted_assets() -> None:
