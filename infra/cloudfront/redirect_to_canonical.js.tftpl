@@ -36,16 +36,34 @@ function handler(event) {
   var host = headers.host && headers.host.value ? headers.host.value.toLowerCase() : "";
   var canonicalHost = "${canonical_host}";
 
-  if (host === canonicalHost) {
-    return request;
+  if (host !== canonicalHost) {
+    return {
+      statusCode: 308,
+      statusDescription: "Permanent Redirect",
+      headers: {
+        "cache-control": { value: "public, max-age=300" },
+        location: { value: "https://" + canonicalHost + request.uri + buildQueryString(request.querystring) }
+      }
+    };
   }
 
-  return {
-    statusCode: 308,
-    statusDescription: "Permanent Redirect",
-    headers: {
-      "cache-control": { value: "public, max-age=300" },
-      location: { value: "https://" + canonicalHost + request.uri + buildQueryString(request.querystring) }
-    }
-  };
+  // Synthesise a CORS preflight response at the edge for the analytics
+  // collector so the API Gateway origin does not need an OPTIONS route.
+  // Only fires for OPTIONS on the exact collect path; all other methods
+  // pass through to the origin normally.
+  if (request.method === "OPTIONS" && request.uri === "/analytics-api/collect") {
+    return {
+      statusCode: 204,
+      statusDescription: "No Content",
+      headers: {
+        "access-control-allow-origin":  { value: "https://${canonical_host}" },
+        "access-control-allow-methods": { value: "POST, OPTIONS" },
+        "access-control-allow-headers": { value: "content-type" },
+        "access-control-max-age":       { value: "86400" },
+        "cache-control":                { value: "public, max-age=86400" }
+      }
+    };
+  }
+
+  return request;
 }

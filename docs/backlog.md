@@ -15,11 +15,6 @@ Curated follow-up work for the portfolio platform.
   - Scope: compute the real DynamoDB on-demand cost per 1M collect events under the new 2 unique-claim + 2 counter-update pattern at Free-tier pricing, update the per-1M-request line, and propagate into the Small/Medium/Large scenario rows.
   - Done when: the cost table in `README.md` reflects the post-Lane-C write count, and the backend variable cost line in the Variable backend cost section is consistent with it.
 
-- [ ] Handle the OPTIONS preflight on `/analytics-api/collect` defensively
-  - Why: production review confirmed that `OPTIONS /analytics-api/collect` returns 404 because the API Gateway HTTP API only has a `POST` route configured. This does not affect the live site today because every call to the collector is same-origin (from HTML pages served under `www.formoseaniap.com`) and `sendBeacon` / `fetch` with a JSON body do not trigger a preflight in that context. If the collector is ever called from a different origin (for instance, an offline-first article reader or a third-party embed), the missing preflight handler would silently drop those events.
-  - Scope: either add an `OPTIONS /analytics-api/collect` route on the API Gateway HTTP API that returns 204 with the right `Access-Control-*` headers, or attach a CloudFront Function on viewer-request for the `/analytics-api/collect` path that synthesises the preflight response at the edge. The CloudFront-function option avoids an extra API Gateway route entry.
-  - Done when: `curl -i -X OPTIONS https://www.formoseaniap.com/analytics-api/collect -H 'origin: https://example.com' -H 'access-control-request-method: POST'` returns 204 with the expected CORS headers.
-
 - [ ] Complete the `formoseaniap.com` cutover while Cloudflare remains authoritative
   - Why: the infrastructure now supports the branded production hostname, but Cloudflare must stay as the live DNS provider until the new-domain transfer lock expires.
   - Scope: run a plain `terraform apply`, create the ACM validation records manually in Cloudflare from the Terraform manual-DNS outputs if the first apply stops at validation, rerun the same plain apply, then add the final cutover records in Cloudflare, verifying `www` as the canonical host plus apex and legacy CloudFront redirects.
