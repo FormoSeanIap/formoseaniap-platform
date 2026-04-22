@@ -647,17 +647,17 @@
 }
 
 .landing-title {
-  max-width: none;
-  font-size: clamp(2.15rem, 1.25rem + 2.7vw, 4rem);
+  max-width: 100%;
+  font-size: clamp(1.8rem, 1.25rem + 2.7vw, 4rem);
   line-height: 1.04;
   letter-spacing: normal;
   text-transform: none;
   white-space: nowrap;
-  font-family: "Noto Sans JP", "Noto Sans", "Manrope", "Segoe UI", sans-serif;
+  font-family: "Manrope", "Noto Sans JP", "Segoe UI", sans-serif;
 }
 
 .landing-subtitle {
-  max-width: none;
+  max-width: 100%;
   white-space: nowrap;
   color: var(--text-soft);
 }

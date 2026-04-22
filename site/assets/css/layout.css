@@ -28,7 +28,7 @@
 }
 
 .brand strong {
-  font-family: "Noto Sans JP", "Noto Sans", "Manrope", "Segoe UI", sans-serif;
+  font-family: "Manrope", "Noto Sans JP", "Segoe UI", sans-serif;
   font-size: var(--step-1);
   letter-spacing: normal;
 }
