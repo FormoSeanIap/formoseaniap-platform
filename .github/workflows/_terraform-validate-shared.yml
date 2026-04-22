@@ -42,7 +42,7 @@ jobs:
           zero_sha="0000000000000000000000000000000000000000"
           before_sha="${{ inputs.compare_base_sha }}"
           after_sha="${{ inputs.compare_head_sha }}"
-          tf_pattern='(^|/).*\.tf$|(^|/).*\.tfvars$|(^|/)\.terraform\.lock\.hcl$'
+          tf_pattern='(^|/).*\.tf$|(^|/).*\.tfvars$|(^|/).*\.tftpl$|(^|/)\.terraform\.lock\.hcl$'
 
           if find infra -type f -name '*.tf' -print -quit | grep -q .; then
             echo "has_tf_root=true" >> "$GITHUB_OUTPUT"
