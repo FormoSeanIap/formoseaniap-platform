@@ -338,6 +338,7 @@
 
 .project-card-body {
   display: grid;
+  grid-template-columns: minmax(0, 1fr);
   gap: var(--space-4);
   align-items: start;
 }
@@ -518,6 +519,7 @@
 .collection-card-content,
 .article-card-content {
   display: grid;
+  grid-template-columns: minmax(0, 1fr);
   gap: var(--space-3);
   padding: var(--space-4);
 }
@@ -832,6 +834,7 @@
 
 .timeline li {
   display: grid;
+  grid-template-columns: minmax(0, 1fr);
   gap: 0.3rem;
   padding-bottom: var(--space-3);
   border-bottom: 1px dashed var(--line);
@@ -854,6 +857,7 @@
 
 .experience-subsection {
   display: grid;
+  grid-template-columns: minmax(0, 1fr);
   gap: 0.4rem;
   margin-top: var(--space-2);
 }
@@ -873,6 +877,9 @@
 
 .article-content {
   display: block;
+  /* Prevent long unbreakable strings (URLs, inline code) from pushing
+     the article body wider than its container. */
+  overflow-wrap: break-word;
 }
 
 .article-content>* {
