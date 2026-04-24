@@ -113,7 +113,7 @@ The podcast feeds are owned by a third party, so the browser cannot rely on upst
 | Security headers | CloudFront attaches the AWS-managed `SecurityHeadersPolicy` (HSTS, `X-Content-Type-Options`, `X-Frame-Options`, `Referrer-Policy`, `X-XSS-Protection`) to static cache behaviors. Managed policies are required here because the CloudFront flat-rate Free plan forbids custom response headers policies. |
 | DNS | Cloudflare remains the current authoritative DNS provider. Route 53 is provisioned/planned as the future DNS authority after migration. |
 | Podcast feed path | CloudFront routes `/podcasts/*` to the upstream RSS host. |
-| Analytics API | CloudFront routes `/analytics-api/*` to a regional API Gateway HTTP API. |
+| Analytics API | CloudFront routes `/analytics-api/*` to a regional API Gateway HTTP API. The shared `redirect_to_canonical` CloudFront Function also synthesises a CORS preflight (204) response at the edge for `OPTIONS /analytics-api/collect`, so the API Gateway origin does not need a dedicated OPTIONS route. |
 | Analytics storage | Lambda writes counters and uniqueness state to DynamoDB. |
 | Monitoring | CloudWatch dashboard and SNS-backed Lambda alarms are provisioned by Terraform. |
 | Custom domains | `www.formoseaniap.com` is the canonical host, with apex redirect support. |
@@ -156,9 +156,9 @@ Using AWS reference pricing as a working estimate:
 
 - `API Gateway HTTP API`: about `$1.00 / 1M requests`
 - `Lambda`: about `$0.30-$0.41 / 1M requests` assuming `128 MB` memory and `50-100 ms` average duration
-- `DynamoDB on-demand`: about `$2.50 / 1M analytics collect requests`
+- `DynamoDB on-demand`: about `$5.00 / 1M analytics collect requests` (4 write-capacity units per request at `$1.25 / 1M WCU`)
 
-That gives a rough backend variable cost of about `~$3.8-$3.9 per 1M analytics collect requests`.
+That gives a rough backend variable cost of about `~$6.3-$6.4 per 1M analytics collect requests`.
 
 ### Traffic scenarios
 
@@ -166,9 +166,9 @@ These scenarios assume the Route 53 zone is attached to the CloudFront plan, the
 
 | Scenario | Analytics collect requests / month | Estimated backend usage | Estimated monthly total |
 | --- | ---: | ---: | ---: |
-| Small | `10,000` | about `$0.04` | about `$1.29/month` |
-| Medium | `100,000` | about `$0.38-$0.39` | about `$1.63-$1.64/month` |
-| Large | `1,000,000` | about `$3.80-$3.91` | about `$5.05-$5.16/month` |
+| Small | `10,000` | about `$0.06` | about `$1.31/month` |
+| Medium | `100,000` | about `$0.63-$0.64` | about `$1.88-$1.89/month` |
+| Large | `1,000,000` | about `$6.30-$6.41` | about `$7.55-$7.66/month` |
 
 If the Route 53 hosted zone is not attached to the CloudFront plan, add about `+$0.50/month` plus Route 53 DNS query charges.
 
