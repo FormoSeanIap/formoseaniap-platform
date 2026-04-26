@@ -142,5 +142,49 @@
   "other": {
     "en": "Other",
     "zh": "其他"
+  },
+  "cloudfront": {
+    "en": "CloudFront",
+    "zh": "CloudFront"
+  },
+  "cloudflare": {
+    "en": "Cloudflare",
+    "zh": "Cloudflare"
+  },
+  "css": {
+    "en": "CSS",
+    "zh": "CSS"
+  },
+  "github-actions": {
+    "en": "GitHub Actions",
+    "zh": "GitHub Actions"
+  },
+  "ci-cd": {
+    "en": "CI/CD",
+    "zh": "CI/CD"
+  },
+  "static-site": {
+    "en": "Static Site",
+    "zh": "靜態網站"
+  },
+  "vibe-coding": {
+    "en": "Vibe Coding",
+    "zh": "Vibe Coding"
+  },
+  "content-migration": {
+    "en": "Content Migration",
+    "zh": "內容遷移"
+  },
+  "caching": {
+    "en": "Caching",
+    "zh": "快取"
+  },
+  "cors": {
+    "en": "CORS",
+    "zh": "CORS"
+  },
+  "frontend": {
+    "en": "Frontend",
+    "zh": "前端"
   }
 }
